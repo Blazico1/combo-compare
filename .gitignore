@@ -1,0 +1,4 @@
+*.szs
+*.bin
+.vscode
+__pycache__
