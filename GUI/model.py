@@ -1,5 +1,6 @@
 import os
 from logic.u8archive import U8Archive
+from logic.stats import parse_stats, normalise_stats, set_names
 
 class Model:
     def __init__(self):
@@ -21,3 +22,48 @@ class Model:
         archive = U8Archive(self.selected_file)
         archive.extract_file('kartParam.bin')
         archive.extract_file('driverParam.bin')
+
+    def get_characters(self):
+        # Return a list of characters
+        return ["-", "Baby Mario", "Baby Luigi", "Baby Peach", "Baby Daisy", "Toad", "Toadette", "Koopa Troopa", "Dry Bones", "Mario", "Luigi", "Peach", "Daisy", "Yoshi", "Birdo", "Diddy Kong", "Bowser Jr.", "Wario", "Waluigi", "Donkey Kong", "Bowser", "King Boo", "Rosalina", "Funky Kong", "Dry Bowser", "Mii S", "Mii M", "Mii L"]
+
+    def get_vehicles(self):
+        # Return a list of vehicles
+        return ["-", "Standard Kart S", "Booster Seat", "Mini Beast", "Cheep Charger", "Tiny Titan", "Blue Falcon", "Standard Bike S", "Bullet Bike", "Bit Bike", "Quacker", "Magikruiser", "Jet Bubble", "Standard Kart M", "Classic Dragster", "Wild Wing", "Super Blooper", "Daytripper", "Sprinter", "Standard Bike M", "Mach Bike", "Sugarscoot", "Zip Zip", "Sneakster", "Dolphin Dasher", "Standard Kart L", "Offroader", "Flame Flyer", "Piranha Prowler", "Jetsetter", "Honeycoupe", "Standard Bike L", "Flame Runner", "Wario Bike", "Shooting Star", "Spear", "Phantom"]
+
+    def get_basic_stats(self, vehicle:str, character:str) -> list:
+        # Return stats for the given character or vehicle
+        vehicles = parse_stats('bins/kartParam.bin')
+        set_names(vehicles, False)
+        characters = parse_stats('bins/driverParam.bin')
+        set_names(characters, True)
+        vehicle_stats = None
+        character_stats = None
+
+        for v in vehicles:
+            if v.name == vehicle:
+                vehicle_stats = v.get_basic_stats()
+                break
+
+        for c in characters:
+            if c.name == character:
+                character_stats = c.get_basic_stats()
+                break
+        
+        if vehicle_stats is None and character_stats is None:
+            return [0] * 7
+        elif vehicle_stats is None:
+            norm_stats = normalise_stats(character_stats, characters=characters)
+        elif character_stats is None:
+            norm_stats = normalise_stats(vehicle_stats, vehicles=vehicles)
+        else:
+            stats = [v + c for v, c in zip(vehicle_stats, character_stats)]
+            norm_stats = normalise_stats(stats, vehicles=vehicles, characters=characters)
+
+        return norm_stats
+        
+        
+
+
+
+

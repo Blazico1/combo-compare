@@ -1,6 +1,11 @@
 import struct
+from logic.id import id_to_vehicle, id_to_driver
 
 class StatsBase:
+    '''
+    Class to store the stats of a vehicle or character
+    '''
+
     def __init__(self, id, num_tires, drift_type, weight_class, unknown, weight, bump_deviation, speed, speed_in_turn, tilt,
                  std_accel_a0, std_accel_a1, std_accel_a2, std_accel_a3, std_accel_t1, std_accel_t2, std_accel_t3,
                  drift_accel_a0, drift_accel_a1, drift_accel_t1, manual_handling, auto_handling, handling_reactivity,
@@ -51,10 +56,63 @@ class StatsBase:
         return (f"StatsBase(name={self.name}, id={self.id:X}, num_tires={self.num_tires}, drift_type={self.drift_type}, "
                 f"weight_class={self.weight_class}, weight={self.weight:.2f}, ...)")
     
-    def set_name(self, name):
-        self.name = name
+    def is_vehicle(self):
+        self.name = id_to_vehicle(self.id)
+    
+    def is_driver(self):
+        self.name = id_to_driver(self.id)
 
-def parse_stats(file_path):
+    def get_basic_stats(self):
+        speed = self.speed
+        weight = self.weight
+        accel = self.std_accel_a0
+        handling = self.manual_handling
+        drift = self.manual_drift
+        offroad = self.speed_multipliers[3]
+        mini_turbo = self.mini_turbo_duration
+
+        return [speed, weight, accel, handling, drift, offroad, mini_turbo]
+
+
+def normalise_stats(stats: list, vehicles = None, characters = None) -> list:
+    '''
+    Normalise the stats of the given vehicles and characters
+    '''
+    
+    if vehicles is None and characters is None:
+        raise ValueError("At least one of vehicles or characters must be provided")
+    
+    # Get the max stats for each category
+    max_vehicle_stats = [0] * 7
+    if vehicles is not None:
+        for vehicle in vehicles:
+            vstats = vehicle.get_basic_stats()
+            for i in range(7):
+                max_vehicle_stats[i] = max(max_vehicle_stats[i], vstats[i])
+
+    max_character_stats = [0] * 7
+    if characters is not None:
+        for character in characters:
+            cstats = character.get_basic_stats()
+            for i in range(7):
+                max_character_stats[i] = max(max_character_stats[i], cstats[i])
+    
+    max_totals = []
+    for i in range(7):
+        max_totals.append(max_vehicle_stats[i] + max_character_stats[i])
+    
+    # Raise an error if one of the max stats is 0
+    if 0 in max_totals:
+        raise ValueError("One of the max stats is 0")
+    
+    # Normalise the stats
+    norm_stats = []
+    for i in range(len(stats)):
+        norm_stats.append(stats[i] / max_totals[i])
+
+    return norm_stats       
+
+def parse_stats(file_path: str) -> list[StatsBase]:
     with open(file_path, 'rb') as f:
         data = f.read()
 
@@ -109,6 +167,17 @@ def parse_stats(file_path):
         offset += 99 * 4  # Each section is 99 32-bit values
 
     return units
+
+def set_names(units: list[StatsBase], is_driver: bool):
+    '''
+    Set the names of the units
+    '''
+
+    for unit in units:
+        if is_driver:
+            unit.is_driver()
+        else:
+            unit.is_vehicle()
 
 # Example usage
 if __name__ == "__main__":
