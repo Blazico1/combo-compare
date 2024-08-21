@@ -36,8 +36,21 @@ class Controller:
             self.view.show_error_message(str(e))
 
     def populate_dropdowns(self):
-        characters = self.model.get_characters()
-        vehicles = self.model.get_vehicles()
+        characters = ['Character', 'Baby Daisy', 'Baby Luigi', 'Baby Mario', 
+                      'Baby Peach', 'Birdo', 'Bowser', 'Bowser Jr.', 'Daisy', 
+                      'Diddy Kong', 'Donkey Kong', 'Dry Bones', 'Dry Bowser', 
+                      'Funky Kong', 'King Boo', 'Koopa Troopa', 'Luigi', 
+                      'Mario', 'Mii L', 'Mii M', 'Mii S', 'Peach', 'Rosalina', 
+                      'Toad', 'Toadette', 'Waluigi', 'Wario', 'Yoshi']
+        vehicles = ['Vehicle', 'Bit Bike', 'Blue Falcon', 'Booster Seat', 
+                    'Bullet Bike', 'Cheep Charger', 'Classic Dragster', 
+                    'Daytripper', 'Dolphin Dasher', 'Flame Flyer', 'Flame Runner', 
+                    'Honeycoupe', 'Jet Bubble', 'Jetsetter', 'Mach Bike', 
+                    'Magikruiser', 'Mini Beast', 'Offroader', 'Piranha Prowler', 
+                    'Quacker', 'Shooting Star', 'Sneakster', 'Spear', 'Standard Bike L', 
+                    'Standard Bike M', 'Standard Bike S', 'Standard Kart L', 'Standard Kart M', 
+                    'Standard Kart S', 'Sugarscoot', 'Super Blooper', 'Tiny Titan', 'Wild Wing', 
+                    'Wario Bike', 'Zip Zip']
         self.view.update_dropdowns(characters, vehicles)
 
     def update_chart(self):
@@ -51,9 +64,28 @@ class Controller:
         stats1 = self.model.get_basic_stats(vehicle1, character1)
         stats2 = self.model.get_basic_stats(vehicle2, character2)
 
-        label1 = f"{vehicle1} + {character1}"
-        label2 = f"{vehicle2} + {character2}"
+        if vehicle1 == "Vehicle":
+            if character1 == "Character":
+                label1 = "No selection"
+            else:
+                label1 = character1
+        else:
+            if character1 == "Character":
+                label1 = vehicle1
+            else:
+                label1 = f"{vehicle1} + {character1}"
 
+        if vehicle2 == "Vehicle":
+            if character2 == "Character":
+                label2 = "No selection"
+            else:
+                label2 = character2
+        else:
+            if character2 == "Character":
+                label2 = vehicle2
+            else:
+                label2 = f"{vehicle2} + {character2}"
+        
         self.view.update_chart([stats1, stats2], [label1, label2])
         
         

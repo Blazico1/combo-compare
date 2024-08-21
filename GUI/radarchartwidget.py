@@ -117,35 +117,56 @@ class RadarChartWidget(QWidget):
         self.theta = radar_factory(num_vars, frame=self.frame)
 
         self.layout = QVBoxLayout(self)
-        self.figure, self.ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(projection='radar'))
+        self.figure, self.ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(projection='radar'))
         self.canvas = FigureCanvas(self.figure)
         self.layout.addWidget(self.canvas)
     
         self.create_radar_chart()
 
     def create_radar_chart(self):
-        
         self.ax.clear()
         self.ax.set_theta_zero_location('N')
         self.ax.set_theta_direction(-1)
-        self.ax.set_ylim(0, 1.1)
+        self.ax.set_ylim(-.1, 1.3)  # Set y-axis limits to always show range 0 to 1
 
         colors = ['b', 'r']  # Add more colors if you have more data sets
         for data, color, label in zip(self.data_sets, colors, self.legend_labels):
-            self.ax.plot(self.theta, data, color=color, label=label)
-            self.ax.fill(self.theta, data, facecolor=color, alpha=0.25)
+            self.ax.plot(self.theta, data, color=color, label=label, zorder=2)
+            self.ax.fill(self.theta, data, facecolor=color, alpha=0.25, zorder=1)
 
         self.ax.set_varlabels(self.labels)
         self.ax.set_title(self.title, weight='bold', size='medium', position=(0.5, 1.1),
-                          horizontalalignment='center', verticalalignment='center')
+                        horizontalalignment='center', verticalalignment='center')
+
+        # Set z-order for grid lines
+        for line in self.ax.get_ygridlines():
+            line.set_zorder(1)
+
+        # Add a box around the labels and adjust z-order
+        for label in self.ax.get_xticklabels():
+            label.set_bbox(dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5'))
+            label.set_fontsize(8)
+            label.set_zorder(3)  # Bring labels to the front
+
+        # Re-draw the labels after everything else
+        for label in self.ax.get_xticklabels():
+            label.set_zorder(3)
+            label.set_fontsize(8)
+
+        # Adjust the z-order of the frame
+        for spine in self.ax.spines.values():
+            spine.set_zorder(0)
 
         if not self.show_numbers:
             self.ax.set_yticklabels([])
 
         if self.show_legend:
-            self.ax.legend(loc='upper right', bbox_to_anchor=(1.1, 1.1))
+            self.ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.2), ncol=3)  # Adjust bbox_to_anchor
 
-        self.figure.subplots_adjust(top=0.85, bottom=0.05)
+        self.figure.subplots_adjust(top=0.85, bottom=0.2)  # Increase bottom margin
+
+        # After everything else, force the labels to the front
+        self.canvas.draw()
 
     def update_data(self, data_sets, legend_labels=None):
         self.data_sets = data_sets

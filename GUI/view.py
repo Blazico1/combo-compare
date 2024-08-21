@@ -1,8 +1,8 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QTextEdit, QFileDialog, QMessageBox, QTabWidget, QComboBox, QLabel
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTextEdit, QFileDialog, QMessageBox, QTabWidget, QComboBox, QLabel
 
 from GUI.radarchartwidget import RadarChartWidget
 
-CATEGORIES = ["Speed", "Weight", "Acceleration", "Handling", "Drift", "Off-Road", "Mini-Turbo"]
+CATEGORIES = ["Speed", "Mini-Turbo", "Drift", "Acceleration", "Off-Road", "Weight", "Handling"] 
         
 class View(QWidget):
     def __init__(self):
@@ -43,25 +43,35 @@ class View(QWidget):
         self.file_tab.setLayout(layout)
 
     def init_basic_stats_tab(self):
-        layout = QVBoxLayout()
+        main_layout = QHBoxLayout()
 
-        self.status_label = QLabel("Please select a Common.szs file to extract.")
-        layout.addWidget(self.status_label)
-
+        # Left column layout
+        left_layout = QVBoxLayout()
         self.left_dropdown_v = QComboBox()
         self.left_dropdown_c = QComboBox()
+        left_layout.addWidget(self.left_dropdown_v)
+        left_layout.addWidget(self.left_dropdown_c)
+
+        # Right column layout
+        right_layout = QVBoxLayout()
         self.right_dropdown_v = QComboBox()
         self.right_dropdown_c = QComboBox()
+        right_layout.addWidget(self.right_dropdown_v)
+        right_layout.addWidget(self.right_dropdown_c)
 
-        layout.addWidget(self.left_dropdown_v)
-        layout.addWidget(self.left_dropdown_c)
-        layout.addWidget(self.right_dropdown_v)
-        layout.addWidget(self.right_dropdown_c)
-
+        # Middle column layout
+        middle_layout = QVBoxLayout()
+        self.status_label = QLabel("Please select a Common.szs file to extract.")
+        middle_layout.addWidget(self.status_label)
         self.chart_view = RadarChartWidget([], CATEGORIES, None, frame='polygon', show_legend=True, show_numbers=False)
-        layout.addWidget(self.chart_view)
+        middle_layout.addWidget(self.chart_view)
 
-        self.basic_stats_tab.setLayout(layout)
+        # Add layouts to the main layout
+        main_layout.addLayout(left_layout)
+        main_layout.addLayout(middle_layout, stretch=3)  # Middle column takes up most of the space
+        main_layout.addLayout(right_layout)
+
+        self.basic_stats_tab.setLayout(main_layout)
 
     def update_status(self, message):
         self.status_textbox.setText(message)

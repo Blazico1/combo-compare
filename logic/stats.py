@@ -71,7 +71,7 @@ class StatsBase:
         offroad = self.speed_multipliers[3]
         mini_turbo = self.mini_turbo_duration
 
-        return [speed, weight, accel, handling, drift, offroad, mini_turbo]
+        return [speed, mini_turbo, drift, accel, offroad, weight, handling]
 
 
 def normalise_stats(stats: list, vehicles = None, characters = None) -> list:
@@ -105,10 +105,37 @@ def normalise_stats(stats: list, vehicles = None, characters = None) -> list:
     if 0 in max_totals:
         raise ValueError("One of the max stats is 0")
     
+    # Get the min stats for each category
+    min_vehicle_stats = [float('inf')] * 7
+    if vehicles is not None:
+        for vehicle in vehicles:
+            vstats = vehicle.get_basic_stats()
+            for i in range(7):
+                min_vehicle_stats[i] = min(min_vehicle_stats[i], vstats[i])
+    else:
+        min_vehicle_stats = [0] * 7
+
+    min_character_stats = [float('inf')] * 7
+    if characters is not None:
+        for character in characters:
+            cstats = character.get_basic_stats()
+            for i in range(7):
+                min_character_stats[i] = min(min_character_stats[i], cstats[i])
+    else:
+        min_character_stats = [0] * 7
+
+    min_totals = []
+    for i in range(7):
+        min_totals.append(min_vehicle_stats[i] + min_character_stats[i])
+
+    # Raise an error if one of the min stats is inf
+    if float('inf') in min_totals:
+        raise ValueError("One of the min stats is inf")  
+    
     # Normalise the stats
     norm_stats = []
     for i in range(len(stats)):
-        norm_stats.append(stats[i] / max_totals[i])
+        norm_stats.append((stats[i] - min_totals[i]) / (max_totals[i] - min_totals[i]))
 
     return norm_stats       
 
