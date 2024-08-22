@@ -1,4 +1,6 @@
 *.szs
-*.bin
+bins/
 .vscode
 __pycache__
+main.spec
+build/
