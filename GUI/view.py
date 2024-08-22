@@ -54,15 +54,32 @@ class View(QWidget):
             }
         """
 
+        # Define the stylesheet for the QComboBox
+        dropdown_stylesheet = """
+            QComboBox {
+                background-color: #3e3e3e;
+                color: #ffffff;
+                border: 1px solid #00ffff;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #3e3e3e;
+                color: #ffffff;
+                selection-background-color: #00ffff;
+                selection-color: #2e2e2e;
+            }
+        """
+
         # Left column layout
         left_container = QWidget()
-        left_container.setStyleSheet("background-color: lightblue;")
+        left_container.setStyleSheet("background-color: darkblue;")
         left_layout = QVBoxLayout(left_container)
         self.left_label = QLabel("Combo 1")
         self.left_label.setStyleSheet(label_stylesheet)
         self.left_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.left_dropdown_v = QComboBox()
+        self.left_dropdown_v.setStyleSheet(dropdown_stylesheet)
         self.left_dropdown_c = QComboBox()
+        self.left_dropdown_c.setStyleSheet(dropdown_stylesheet)
         left_layout.addStretch()  # Add a stretchable space at the top
         left_layout.addWidget(self.left_label)
         left_layout.addWidget(self.left_dropdown_v)
@@ -71,13 +88,15 @@ class View(QWidget):
 
         # Right column layout
         right_container = QWidget()
-        right_container.setStyleSheet("background-color: lightcoral;")
+        right_container.setStyleSheet("background-color: darkred;")
         right_layout = QVBoxLayout(right_container)
         self.right_label = QLabel("Combo 2")
         self.right_label.setStyleSheet(label_stylesheet)
         self.right_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.right_dropdown_v = QComboBox()
+        self.right_dropdown_v.setStyleSheet(dropdown_stylesheet)
         self.right_dropdown_c = QComboBox()
+        self.right_dropdown_c.setStyleSheet(dropdown_stylesheet)
         right_layout.addStretch()  # Add a stretchable space at the top
         right_layout.addWidget(self.right_label)
         right_layout.addWidget(self.right_dropdown_v)

@@ -118,6 +118,8 @@ class RadarChartWidget(QWidget):
 
         self.layout = QVBoxLayout(self)
         self.figure, self.ax = plt.subplots(figsize=(7, 7), subplot_kw=dict(projection='radar'))
+        self.figure.patch.set_facecolor('#2e2e2e')  # Dark background for the figure
+
         self.canvas = FigureCanvas(self.figure)
         self.layout.addWidget(self.canvas)
     
@@ -127,9 +129,13 @@ class RadarChartWidget(QWidget):
         self.ax.clear()
         self.ax.set_theta_zero_location('N')
         self.ax.set_theta_direction(-1)
-        self.ax.set_ylim(-.1, 1.3)  # Set y-axis limits to always show range 0 to 1
+        self.ax.set_ylim(-.1, 1.1)  
 
-        colors = ['b', 'r']  # Add more colors if you have more data sets
+        self.ax.set_facecolor('#2e2e2e')  # Dark background for the axes
+        self.ax.spines['polar'].set_color('#00ffff')  # Cyan border
+        self.ax.grid(color='#888888')  # Grey gridlines
+
+        colors = ['#2244FF', '#FF2222']  # Add more colors if you have more data sets
         for data, color, label in zip(self.data_sets, colors, self.legend_labels):
             self.ax.plot(self.theta, data, color=color, label=label, zorder=2)
             self.ax.fill(self.theta, data, facecolor=color, alpha=0.25, zorder=1)
@@ -144,7 +150,7 @@ class RadarChartWidget(QWidget):
 
         # Add a box around the labels and adjust z-order
         for label in self.ax.get_xticklabels():
-            label.set_bbox(dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5'))
+            label.set_bbox(dict(facecolor='white', edgecolor='cyan', boxstyle='round,pad=0.5'))
             label.set_fontsize(8)
             label.set_zorder(3)  # Bring labels to the front
 
@@ -191,8 +197,4 @@ if __name__ == "__main__":
     # Create and display the radar chart widget with custom data and labels
     radar_chart_widget = RadarChartWidget([data1, data2], labels, title, frame='polygon', show_legend=True, show_numbers=False, legend_labels=legend_labels)
     radar_chart_widget.show()
-    import time
-    time.sleep(2)
-    radar_chart_widget.update_data([data1, data1], legend_labels=['Standard Bike', 'Standard Kart'])
-    
     sys.exit(app.exec())

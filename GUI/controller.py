@@ -46,8 +46,8 @@ class Controller:
                     'Bullet Bike', 'Cheep Charger', 'Classic Dragster', 
                     'Daytripper', 'Dolphin Dasher', 'Flame Flyer', 'Flame Runner', 
                     'Honeycoupe', 'Jet Bubble', 'Jetsetter', 'Mach Bike', 
-                    'Magikruiser', 'Mini Beast', 'Offroader', 'Piranha Prowler', 
-                    'Quacker', 'Shooting Star', 'Sneakster', 'Spear', 'Standard Bike L', 
+                    'Magikruiser', 'Mini Beast', 'Offroader', 'Phantom', 'Piranha Prowler', 
+                    'Quacker', 'Shooting Star', 'Sneakster', 'Spear', 'Sprinter', 'Standard Bike L', 
                     'Standard Bike M', 'Standard Bike S', 'Standard Kart L', 'Standard Kart M', 
                     'Standard Kart S', 'Sugarscoot', 'Super Blooper', 'Tiny Titan', 'Wild Wing', 
                     'Wario Bike', 'Zip Zip']

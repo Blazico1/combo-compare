@@ -24,6 +24,11 @@ class Model:
         archive.extract_file('driverParam.bin')
 
     def get_basic_stats(self, vehicle:str, character:str) -> list:
+
+        # Check if the files exist
+        if not self.check_files():
+            return [0] * 7
+        
         # Return stats for the given character or vehicle
         vehicles = parse_stats('bins/kartParam.bin')
         set_names(vehicles, False)
