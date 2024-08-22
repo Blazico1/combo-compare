@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTextEdit, QFileDialog, QMessageBox, QTabWidget, QComboBox, QLabel
-
+from PyQt6.QtCore import Qt
 from GUI.radarchartwidget import RadarChartWidget
 
 CATEGORIES = ["Speed", "Mini-Turbo", "Drift", "Acceleration", "Off-Road", "Weight", "Handling"] 
@@ -8,7 +8,7 @@ class View(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Stats GUI")
+        self.setWindowTitle("Combo Compare")
         self.setGeometry(100, 100, 800, 600)
 
         self.tabs = QTabWidget()
@@ -45,19 +45,44 @@ class View(QWidget):
     def init_basic_stats_tab(self):
         main_layout = QHBoxLayout()
 
+        # Define the stylesheet for the labels
+        label_stylesheet = """
+            QLabel {
+                font-weight: bold;
+                font-size: 14pt;
+                text-align: center;
+            }
+        """
+
         # Left column layout
-        left_layout = QVBoxLayout()
+        left_container = QWidget()
+        left_container.setStyleSheet("background-color: lightblue;")
+        left_layout = QVBoxLayout(left_container)
+        self.left_label = QLabel("Combo 1")
+        self.left_label.setStyleSheet(label_stylesheet)
+        self.left_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.left_dropdown_v = QComboBox()
         self.left_dropdown_c = QComboBox()
+        left_layout.addStretch()  # Add a stretchable space at the top
+        left_layout.addWidget(self.left_label)
         left_layout.addWidget(self.left_dropdown_v)
         left_layout.addWidget(self.left_dropdown_c)
+        left_layout.addStretch()  # Add a stretchable space at the bottom
 
         # Right column layout
-        right_layout = QVBoxLayout()
+        right_container = QWidget()
+        right_container.setStyleSheet("background-color: lightcoral;")
+        right_layout = QVBoxLayout(right_container)
+        self.right_label = QLabel("Combo 2")
+        self.right_label.setStyleSheet(label_stylesheet)
+        self.right_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.right_dropdown_v = QComboBox()
         self.right_dropdown_c = QComboBox()
+        right_layout.addStretch()  # Add a stretchable space at the top
+        right_layout.addWidget(self.right_label)
         right_layout.addWidget(self.right_dropdown_v)
         right_layout.addWidget(self.right_dropdown_c)
+        right_layout.addStretch()  # Add a stretchable space at the bottom
 
         # Middle column layout
         middle_layout = QVBoxLayout()
@@ -67,9 +92,9 @@ class View(QWidget):
         middle_layout.addWidget(self.chart_view)
 
         # Add layouts to the main layout
-        main_layout.addLayout(left_layout)
+        main_layout.addWidget(left_container)
         main_layout.addLayout(middle_layout, stretch=3)  # Middle column takes up most of the space
-        main_layout.addLayout(right_layout)
+        main_layout.addWidget(right_container)
 
         self.basic_stats_tab.setLayout(main_layout)
 
