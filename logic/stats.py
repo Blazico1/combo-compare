@@ -1,6 +1,5 @@
 import struct
 import numpy as np
-from copy import deepcopy
 from logic.id import id_to_vehicle, id_to_driver
 
 def EMPTY_DICT():
