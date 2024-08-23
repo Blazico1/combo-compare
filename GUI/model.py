@@ -1,6 +1,6 @@
 import os
 from logic.u8archive import U8Archive
-from logic.stats import parse_stats, normalise_stats, set_names
+from logic.stats import parse_stats, normalise_stats, set_names, EMPTY_DICT
 
 class Model:
     def __init__(self):
@@ -27,7 +27,7 @@ class Model:
 
         # Check if the files exist
         if not self.check_files():
-            return [0] * 7
+            return EMPTY_DICT()
         
         # Return stats for the given character or vehicle
         vehicles = parse_stats('bins/kartParam.bin')
@@ -48,14 +48,13 @@ class Model:
                 break
         
         if vehicle_stats is None and character_stats is None:
-            return [0] * 7
+            return EMPTY_DICT()
         elif vehicle_stats is None:
-            norm_stats = normalise_stats(character_stats, characters=characters)
+            norm_stats = normalise_stats(c_stats=character_stats, characters=characters)
         elif character_stats is None:
-            norm_stats = normalise_stats(vehicle_stats, vehicles=vehicles)
+            norm_stats = normalise_stats(v_stats=vehicle_stats, vehicles=vehicles)
         else:
-            stats = [v + c for v, c in zip(vehicle_stats, character_stats)]
-            norm_stats = normalise_stats(stats, vehicles=vehicles, characters=characters)
+            norm_stats = normalise_stats(v_stats=vehicle_stats, c_stats=character_stats, vehicles=vehicles, characters=characters)
 
         return norm_stats
         

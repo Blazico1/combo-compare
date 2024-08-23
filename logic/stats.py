@@ -1,5 +1,13 @@
 import struct
+import numpy as np
+from copy import deepcopy
 from logic.id import id_to_vehicle, id_to_driver
+
+def EMPTY_DICT():
+    return {"speed": 0, "mini_turbo": 0, "drift": 0, "As": [0,0,0,0], "Ts": [0,0,0], "offroad": 0, "weight": 0, "handling": 0, "acceleration": 0}
+
+def INF_DICT():
+    return {"speed": float('inf'), "mini_turbo": float('inf'), "drift": float('inf'), "As": [float('inf'),float('inf'),float('inf'),float('inf')], "Ts": [float('inf'),float('inf'),float('inf')], "offroad": float('inf'), "weight": float('inf'), "handling": float('inf'), "acceleration": float('inf')}
 
 class StatsBase:
     '''
@@ -51,6 +59,7 @@ class StatsBase:
         self.max_normal_accel = max_normal_accel
         self.mega_mushroom_scale = mega_mushroom_scale
         self.tire_distance = tire_distance
+        self.vehicle_flag = False
 
     def __repr__(self):
         return (f"StatsBase(name={self.name}, id={self.id:X}, num_tires={self.num_tires}, drift_type={self.drift_type}, "
@@ -58,84 +67,128 @@ class StatsBase:
     
     def is_vehicle(self):
         self.name = id_to_vehicle(self.id)
+        self.vehicle_flag = True
     
     def is_driver(self):
         self.name = id_to_driver(self.id)
+        self.vehicle_flag = False
 
     def get_basic_stats(self):
         speed = self.speed
-        weight = self.weight
-        accel = self.std_accel_a0
-        handling = self.manual_handling
-        drift = self.manual_drift
-        offroad = self.speed_multipliers[3]
         mini_turbo = self.mini_turbo_duration
+        drift = self.manual_drift
 
-        return [speed, mini_turbo, drift, accel, offroad, weight, handling]
+        As = [self.std_accel_a0, self.std_accel_a1, self.std_accel_a2, self.std_accel_a3]
+        Ts = [self.std_accel_t1, self.std_accel_t2, self.std_accel_t3]
+        
+        offroad = self.speed_multipliers[2] + self.speed_multipliers[3] + self.speed_multipliers[4]
+        weight = self.weight
+        handling = self.manual_handling
 
+        stats = {
+            "speed": speed,
+            "mini_turbo": mini_turbo,
+            "drift": drift,
+            "As": As,
+            "Ts": Ts,	
+            "offroad": offroad,
+            "weight": weight,
+            "handling": handling,
+            "acceleration": np.sum(As)
 
-def normalise_stats(stats: list, vehicles = None, characters = None) -> list:
+        }
+        return stats
+
+def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), vehicles: list = [], characters: list = []) -> dict:
     '''
     Normalise the stats of the given vehicles and characters
     '''
     
-    if vehicles is None and characters is None:
+    keys = ["speed", "mini_turbo", "drift", "offroad", "weight", "handling", "acceleration"]
+
+    if not vehicles and not characters:
         raise ValueError("At least one of vehicles or characters must be provided")
     
     # Get the max stats for each category
-    max_vehicle_stats = [0] * 7
-    if vehicles is not None:
+    max_vehicle_stats = EMPTY_DICT()
+    if vehicles:
         for vehicle in vehicles:
             vstats = vehicle.get_basic_stats()
-            for i in range(7):
-                max_vehicle_stats[i] = max(max_vehicle_stats[i], vstats[i])
+            for key in keys:
+                max_vehicle_stats[key] = max(max_vehicle_stats[key], vstats[key])
 
-    max_character_stats = [0] * 7
-    if characters is not None:
+    max_character_stats = EMPTY_DICT()
+    if characters:
         for character in characters:
             cstats = character.get_basic_stats()
-            for i in range(7):
-                max_character_stats[i] = max(max_character_stats[i], cstats[i])
+            for key in keys:
+                max_character_stats[key] = max(max_character_stats[key], cstats[key])
     
-    max_totals = []
-    for i in range(7):
-        max_totals.append(max_vehicle_stats[i] + max_character_stats[i])
-    
-    # Raise an error if one of the max stats is 0
-    if 0 in max_totals:
-        raise ValueError("One of the max stats is 0")
+    max_totals = EMPTY_DICT()
+    for key in keys:
+        max_totals[key] = (max_vehicle_stats[key] + max_character_stats[key])
     
     # Get the min stats for each category
-    min_vehicle_stats = [float('inf')] * 7
-    if vehicles is not None:
+    min_vehicle_stats = INF_DICT()
+    if vehicles:
         for vehicle in vehicles:
             vstats = vehicle.get_basic_stats()
-            for i in range(7):
-                min_vehicle_stats[i] = min(min_vehicle_stats[i], vstats[i])
+            for key in keys:
+                min_vehicle_stats[key] = min(min_vehicle_stats[key], vstats[key])
     else:
-        min_vehicle_stats = [0] * 7
+        min_vehicle_stats = EMPTY_DICT()
 
-    min_character_stats = [float('inf')] * 7
-    if characters is not None:
+    min_character_stats = INF_DICT()
+    if characters:
         for character in characters:
             cstats = character.get_basic_stats()
-            for i in range(7):
-                min_character_stats[i] = min(min_character_stats[i], cstats[i])
+            for key in keys:
+                min_character_stats[key] = min(min_character_stats[key], cstats[key])
     else:
-        min_character_stats = [0] * 7
+        min_character_stats = EMPTY_DICT()
 
-    min_totals = []
-    for i in range(7):
-        min_totals.append(min_vehicle_stats[i] + min_character_stats[i])
+    min_totals = EMPTY_DICT()
+    for key in keys:
+        min_totals[key] = (min_vehicle_stats[key] + min_character_stats[key])
 
+    # Handle acceleration separately
+    max_accel = 0
+    min_accel = float('inf')
+    if v_stats is not {}:
+        for vehicle in vehicles:
+            vstats = vehicle.get_basic_stats()
+            v_As = vstats["As"]
+            v_Ts = vstats["Ts"]
+            accel = calc_distance_traveled(0, vstats["speed"], v_As, v_Ts, 5)
+            max_accel = max(max_accel, accel)
+            min_accel = min(min_accel, accel)
+
+        max_totals["acceleration"] = max_accel
+        min_totals["acceleration"] = min_accel
+
+    # Raise an error if one of the max stats is 0
+    if 0 in max_totals.values():
+        raise ValueError("One of the max stats is 0")
+    
     # Raise an error if one of the min stats is inf
-    if float('inf') in min_totals:
+    if float('inf') in min_totals.values():
         raise ValueError("One of the min stats is inf")  
     
+    # Combine vehicle and character stats
+    stats = EMPTY_DICT()
+    for key in keys:
+        stats[key] = v_stats[key] + c_stats[key]
+
+    if vehicles is not []:
+        stats["As"] = [v + c for v, c in zip(v_stats["As"], c_stats["As"])]
+        stats["Ts"] = v_stats["Ts"]
+        stats["acceleration"] = calc_distance_traveled(0, stats["speed"], stats["As"], stats["Ts"], 5)
+
+
     # Normalise the stats
-    norm_stats = []
-    for i in range(len(stats)):
-        norm_stats.append((stats[i] - min_totals[i]) / (max_totals[i] - min_totals[i]))
+    norm_stats = EMPTY_DICT()
+    for key in keys:
+        norm_stats[key] = (stats[key] - min_totals[key]) / (max_totals[key] - min_totals[key])
 
     return norm_stats       
 
@@ -205,6 +258,78 @@ def set_names(units: list[StatsBase], is_driver: bool):
             unit.is_driver()
         else:
             unit.is_vehicle()
+
+def calc_acceleration(speed, top_speed, acceleration_values, t_values):
+    """
+    Calculate the acceleration based on the current speed and top speed.
+
+    :param speed: Current speed of the vehicle.
+    :param top_speed: Top speed of the vehicle.
+    :param acceleration_values: List of acceleration values (A0 to A4).
+    :param t_values: List of T values (T1 to T3).
+    :return: Calculated acceleration.
+    """
+    T = speed / top_speed
+
+    if T <= 0:
+        return acceleration_values[0]
+    elif T >= 1:
+        return 0
+
+    # Interpolate between the data points
+    T_values_with_zero = [0] + t_values
+    for i in range(1, len(T_values_with_zero)):
+        if T < T_values_with_zero[i]:
+            T0 = T_values_with_zero[i - 1]
+            T1 = T_values_with_zero[i]
+            A0 = acceleration_values[i - 1]
+            A1 = acceleration_values[i]
+            return A0 + (A1 - A0) * ((T - T0) / (T1 - T0))
+
+
+    return acceleration_values[-1]
+
+def generate_data_points(initial_speed, top_speed, acceleration_values, t_values, total_time):
+    """
+    Generate data points for speed, acceleration and distance over time.
+
+    :param initial_speed: Initial speed of the vehicle.
+    :param top_speed: Top speed of the vehicle.
+    :param acceleration_values: List of acceleration values (A0 to A4).
+    :param t_values: List of T values (T1 to T3).
+    :param total_time: Total time to generate data points for.
+    :return: Tuple of lists (times, speeds, accelerations).
+    """
+    times = np.arange(0, total_time, 1/60)  # 60 FPS
+    speeds = []
+    accelerations = []
+    distances = []
+    current_speed = initial_speed
+
+    for t in times:
+        acceleration = calc_acceleration(current_speed, top_speed, acceleration_values, t_values)
+        current_speed += acceleration  # Update speed based on acceleration
+        if current_speed > top_speed:
+            current_speed = top_speed
+        speeds.append(current_speed)
+        accelerations.append(acceleration)
+
+    distances = np.cumsum(speeds)
+    return times, speeds, accelerations, distances
+
+def calc_distance_traveled(speed, top_speed, acceleration_values, t_values, total_time):
+    """
+    Calculate the distance traveled over time.
+
+    :param speed: Current speed of the vehicle.
+    :param top_speed: Top speed of the vehicle.
+    :param acceleration_values: List of acceleration values (A0 to A4).
+    :param t_values: List of T values (T1 to T3).
+    :param total_time: Total time to calculate the distance traveled.
+    :return: Distance traveled over time.
+    """
+    times, speeds, accelerations, distances = generate_data_points(speed, top_speed, acceleration_values, t_values, total_time)
+    return distances[-1]
 
 # Example usage
 if __name__ == "__main__":

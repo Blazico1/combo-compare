@@ -85,7 +85,11 @@ class Controller:
                 label2 = vehicle2
             else:
                 label2 = f"{vehicle2} + {character2}"
-        
+
+        # Turn dicts into lists
+        keys = ["speed", "mini_turbo", "drift", "acceleration", "offroad", "weight", "handling"]
+        stats1 = [stats1[k] for k in keys]
+        stats2 = [stats2[k] for k in keys]
         self.view.update_chart([stats1, stats2], [label1, label2])
         
         
