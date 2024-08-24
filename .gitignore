@@ -4,3 +4,8 @@ bins/
 __pycache__
 main.spec
 build/
+dist/main.dist/
+dist/main.build/
+dist/main.onefile-build/
+dist/bins/
+setup.py
