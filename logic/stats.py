@@ -153,7 +153,8 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
     # Handle acceleration separately
     max_accel = 0
     min_accel = float('inf')
-    if v_stats is not {}:
+
+    if vehicles:
         for vehicle in vehicles:
             vstats = vehicle.get_basic_stats()
             v_As = vstats["As"]
@@ -166,8 +167,10 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
         min_totals["acceleration"] = min_accel
 
     # Raise an error if one of the max stats is 0
-    if 0 in max_totals.values():
-        raise ValueError("One of the max stats is 0")
+    for key in keys:
+        if max_totals[key] == 0:
+            if max_totals[key] != min_totals[key]:
+                raise ValueError("One of the max stats is 0")
     
     # Raise an error if one of the min stats is inf
     if float('inf') in min_totals.values():
@@ -178,7 +181,7 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
     for key in keys:
         stats[key] = v_stats[key] + c_stats[key]
 
-    if vehicles is not []:
+    if vehicles:
         stats["As"] = [v + c for v, c in zip(v_stats["As"], c_stats["As"])]
         stats["Ts"] = v_stats["Ts"]
         stats["acceleration"] = calc_distance_traveled(0, stats["speed"], stats["As"], stats["Ts"], 5)
