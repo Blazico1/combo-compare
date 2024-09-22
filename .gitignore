@@ -1,5 +1,5 @@
 *.szs
-bins/
+*.bin
 .vscode
 __pycache__
 main.spec

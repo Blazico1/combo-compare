@@ -85,29 +85,17 @@ class U8Archive:
             print(node)
     
     def extract_file(self, file_name):
-        # Ensure the 'bins' directory exists in the current working directory
-        bins_dir = os.path.join(os.getcwd(), 'bins')
-        os.makedirs(bins_dir, exist_ok=True)
-        
         for node in self.nodes:
             if node.name == file_name:
                 start = node.data_offset_or_parent_index
                 end = start + node.size_or_next_node_index
                 file_data = self.data[start:end]
                 
-                # Create the full output path within the 'bins' directory
-                full_output_path = os.path.join(bins_dir, file_name)
+                # Create the full output path in the current working directory
+                full_output_path = os.path.join(os.getcwd(), file_name)
                 
                 with open(full_output_path, 'wb') as f:
                     f.write(file_data)
                 print(f"Extracted {file_name} to {full_output_path}")
                 return
         print(f"File {file_name} not found in the archive")
-
-# Example usage
-if __name__ == "__main__":
-    path = 'Common.szs'
-    
-    archive = U8Archive(path)
-    #archive.print_nodes()
-    archive.extract_file('driverParam.bin')

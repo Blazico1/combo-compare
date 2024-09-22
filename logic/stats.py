@@ -332,9 +332,3 @@ def calc_distance_traveled(speed, top_speed, acceleration_values, t_values, tota
     """
     times, speeds, accelerations, distances = generate_data_points(speed, top_speed, acceleration_values, t_values, total_time)
     return distances[-1]
-
-# Example usage
-if __name__ == "__main__":
-    units = parse_stats('bins\\driverParam.bin')
-    for unit in units:
-        print(unit)
