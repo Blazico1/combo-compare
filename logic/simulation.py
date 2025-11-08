@@ -7,7 +7,7 @@ def simulate_accel(vstats, cstats, wheelie=False, ssmt=False, time=10.0):
     StatsBase.get_basic_stats() (keys: 'speed', 'As', 'Ts', ...).
     This function no longer parses files; the caller should provide the
     already-parsed stats (keeps simulation pure and testable).
-    Returns (speeds, distances).
+    Returns (speeds, distances) in units per frame (u/f).
     """
     if vstats is None and cstats is None:
         return None
@@ -36,10 +36,10 @@ def simulate_accel(vstats, cstats, wheelie=False, ssmt=False, time=10.0):
 
     for frame in range(frame_count):
         if ssmt:
-            if frame < 76:
+            if frame <= 75:
                 # Charging phase
                 acceleration = 0
-            elif frame < 76 + 30:
+            elif frame <= 75 + 30:
                 # Boost phase
                 acceleration = 3
             else:
@@ -48,10 +48,14 @@ def simulate_accel(vstats, cstats, wheelie=False, ssmt=False, time=10.0):
         else:
             acceleration = calc_acceleration(current_speed, top_speed, As, Ts)
 
-        current_speed += acceleration
+        if acceleration >= 0:
+            current_speed += acceleration
+        else:
+            # Deceleration
+            current_speed = max(current_speed + acceleration, current_speed)
 
         # Apply speed caps
-        if ssmt and frame < 76 + 30:
+        if ssmt and frame <= 75 + 30:
             current_speed = min(current_speed, boost_top_speed)
         else:
             current_speed = min(current_speed, top_speed)
@@ -63,7 +67,7 @@ def simulate_accel(vstats, cstats, wheelie=False, ssmt=False, time=10.0):
         speeds.append(current_speed)
         distances.append(current_distance)
 
-    return speeds, distances
+    return np.array(speeds), np.array(distances)
 
 
 def simulate_mini_turbo(vstats, cstats, wheelie=False, SMT=False, time=10.0):
@@ -71,6 +75,7 @@ def simulate_mini_turbo(vstats, cstats, wheelie=False, SMT=False, time=10.0):
 
     The initial speed for the post-mini-turbo window is set to the combo's
     drifting top speed (vehicle.speed_in_turn + character.speed_in_turn).
+    Returns (speeds, distances) in units per frame (u/f).
     """
     if vstats is None and cstats is None:
         return None
@@ -114,16 +119,19 @@ def simulate_mini_turbo(vstats, cstats, wheelie=False, SMT=False, time=10.0):
             #MT ended
             current_speed = max(current_speed - 3, top_speed)
 
-        current_distance =+ current_speed
+        current_distance += current_speed
 
         speeds.append(current_speed)
         distances.append(current_distance)
 
-    return speeds, distances
+    return np.array(speeds), np.array(distances)
 
 
 def calc_acceleration(speed, top_speed, acceleration_values, t_values):
-    """Port of calc_acceleration from stats: compute instantaneous accel given speed fraction."""
+    """Port of calc_acceleration from stats: compute instantaneous accel given speed fraction.
+
+    Returns acceleration in units per frame (u/f).
+    """
     if speed > top_speed:
         return -3  # deceleration due to overspeed
 

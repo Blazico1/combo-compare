@@ -13,19 +13,42 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QFrame,
     QGridLayout,
+    QSlider,
     )
 from PyQt6.QtCore import Qt
 from GUI.radarchartwidget import RadarChartWidget
 from GUI.timeplotwidget import TimePlotWidget
 
 CATEGORIES = ["Speed", "Mini-Turbo", "Drift", "Acceleration", "Off-Road", "Weight", "Handling"] 
-    
+
 class View(QWidget):
+    # Class constants for stylesheets
+    LABEL_STYLESHEET = """
+        QLabel {
+            font-weight: bold;
+            font-size: 14pt;
+            text-align: center;
+        }
+    """
+    
+    DROPDOWN_STYLESHEET = """
+        QComboBox {
+            background-color: #3e3e3e;
+            color: #ffffff;
+            border: 1px solid #00ffff;
+        }
+        QComboBox QAbstractItemView {
+            background-color: #3e3e3e;
+            color: #ffffff;
+            selection-background-color: #00ffff;
+            selection-color: #2e2e2e;
+        }
+    """
     def __init__(self):
         super().__init__()
 
         self.setWindowTitle("Combo Compare")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 900, 600)
 
         self.tabs = QTabWidget()
         self.file_tab = QWidget()
@@ -65,41 +88,17 @@ class View(QWidget):
     def init_basic_stats_tab(self):
         main_layout = QHBoxLayout()
 
-        # Define the stylesheet for the labels
-        label_stylesheet = """
-            QLabel {
-                font-weight: bold;
-                font-size: 14pt;
-                text-align: center;
-            }
-        """
-
-        # Define the stylesheet for the QComboBox
-        dropdown_stylesheet = """
-            QComboBox {
-                background-color: #3e3e3e;
-                color: #ffffff;
-                border: 1px solid #00ffff;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #3e3e3e;
-                color: #ffffff;
-                selection-background-color: #00ffff;
-                selection-color: #2e2e2e;
-            }
-        """
-
         # Left column layout
         left_container = QWidget()
         left_container.setStyleSheet("background-color: darkblue;")
         left_layout = QVBoxLayout(left_container)
         self.left_label = QLabel("Combo 1")
-        self.left_label.setStyleSheet(label_stylesheet)
+        self.left_label.setStyleSheet(self.LABEL_STYLESHEET)
         self.left_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.left_dropdown_v = QComboBox()
-        self.left_dropdown_v.setStyleSheet(dropdown_stylesheet)
+        self.left_dropdown_v.setStyleSheet(self.DROPDOWN_STYLESHEET)
         self.left_dropdown_c = QComboBox()
-        self.left_dropdown_c.setStyleSheet(dropdown_stylesheet)
+        self.left_dropdown_c.setStyleSheet(self.DROPDOWN_STYLESHEET)
         left_layout.addStretch()  # Add a stretchable space at the top
         left_layout.addWidget(self.left_label)
         left_layout.addWidget(self.left_dropdown_v)
@@ -111,12 +110,12 @@ class View(QWidget):
         right_container.setStyleSheet("background-color: darkred;")
         right_layout = QVBoxLayout(right_container)
         self.right_label = QLabel("Combo 2")
-        self.right_label.setStyleSheet(label_stylesheet)
+        self.right_label.setStyleSheet(self.LABEL_STYLESHEET)
         self.right_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.right_dropdown_v = QComboBox()
-        self.right_dropdown_v.setStyleSheet(dropdown_stylesheet)
+        self.right_dropdown_v.setStyleSheet(self.DROPDOWN_STYLESHEET)
         self.right_dropdown_c = QComboBox()
-        self.right_dropdown_c.setStyleSheet(dropdown_stylesheet)
+        self.right_dropdown_c.setStyleSheet(self.DROPDOWN_STYLESHEET)
         right_layout.addStretch()  # Add a stretchable space at the top
         right_layout.addWidget(self.right_label)
         right_layout.addWidget(self.right_dropdown_v)
@@ -137,87 +136,70 @@ class View(QWidget):
 
         self.basic_stats_tab.setLayout(main_layout)
 
+    def create_sim_column(self, side, color, combo_number):
+        """Create a simulation tab column with all widgets."""
+        container = QWidget()
+        container.setStyleSheet(f"background-color: {color};")
+        layout = QVBoxLayout(container)
+        
+        # Label
+        label = QLabel(f"Combo {combo_number}")
+        label.setStyleSheet(self.LABEL_STYLESHEET)
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Dropdowns
+        dropdown_v = QComboBox()
+        dropdown_v.setStyleSheet(self.DROPDOWN_STYLESHEET)
+        dropdown_c = QComboBox()
+        dropdown_c.setStyleSheet(self.DROPDOWN_STYLESHEET)
+        
+        # Checkboxes
+        hide_cb = QCheckBox("Hide")
+        wheelie_cb = QCheckBox("Wheelie")
+        smt_cb = QCheckBox("SMT")
+        ssmt_cb = QCheckBox("SSMT")
+        
+        # Stats label
+        stats_label = QLabel("Stats will appear here")
+        stats_label.setStyleSheet("color: white; font-size: 10pt;")
+        stats_label.setWordWrap(True)
+        stats_label.setFixedHeight(150)
+        
+        # Add widgets to layout
+        layout.addStretch()
+        layout.addWidget(label)
+        layout.addWidget(dropdown_v)
+        layout.addWidget(dropdown_c)
+        layout.addWidget(hide_cb)
+        layout.addWidget(wheelie_cb)
+        layout.addWidget(smt_cb)
+        layout.addWidget(ssmt_cb)
+        layout.addWidget(stats_label)
+        layout.addStretch()
+        
+        # Store references
+        setattr(self, f"sim_{side}_label", label)
+        setattr(self, f"sim_{side}_dropdown_v", dropdown_v)
+        setattr(self, f"sim_{side}_dropdown_c", dropdown_c)
+        setattr(self, f"sim_{side}_hide_cb", hide_cb)
+        setattr(self, f"sim_{side}_wheelie_cb", wheelie_cb)
+        setattr(self, f"sim_{side}_smt_cb", smt_cb)
+        setattr(self, f"sim_{side}_ssmt_cb", ssmt_cb)
+        setattr(self, f"sim_{side}_stats_label", stats_label)
+        
+        return container
+
     def init_sim_tab(self):
         main_layout = QHBoxLayout()
 
-        # Define the stylesheet for the labels
-        label_stylesheet = """
-            QLabel {
-                font-weight: bold;
-                font-size: 14pt;
-                text-align: center;
-            }
-        """
-
-        # Define the stylesheet for the QComboBox
-        dropdown_stylesheet = """
-            QComboBox {
-                background-color: #3e3e3e;
-                color: #ffffff;
-                border: 1px solid #00ffff;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #3e3e3e;
-                color: #ffffff;
-                selection-background-color: #00ffff;
-                selection-color: #2e2e2e;
-            }
-        """
-
-        # Left column layout
-        left_container = QWidget()
-        left_container.setStyleSheet("background-color: darkblue;")
-        left_layout = QVBoxLayout(left_container)
-        self.sim_left_label = QLabel("Combo 1")
-        self.sim_left_label.setStyleSheet(label_stylesheet)
-        self.sim_left_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.sim_left_dropdown_v = QComboBox()
-        self.sim_left_dropdown_v.setStyleSheet(dropdown_stylesheet)
-        self.sim_left_dropdown_c = QComboBox()
-        self.sim_left_dropdown_c.setStyleSheet(dropdown_stylesheet)
-        # Per-combo options
-        self.sim_left_hide_cb = QCheckBox("Hide")
-        self.sim_left_wheelie_cb = QCheckBox("Wheelie")
-        self.sim_left_smt_cb = QCheckBox("SMT")
-        self.sim_left_ssmt_cb = QCheckBox("SSMT")
-        left_layout.addStretch()  # Add a stretchable space at the top
-        left_layout.addWidget(self.sim_left_label)
-        left_layout.addWidget(self.sim_left_dropdown_v)
-        left_layout.addWidget(self.sim_left_dropdown_c)
-        left_layout.addWidget(self.sim_left_hide_cb)
-        left_layout.addWidget(self.sim_left_wheelie_cb)
-        left_layout.addWidget(self.sim_left_smt_cb)
-        left_layout.addWidget(self.sim_left_ssmt_cb)
-        left_layout.addStretch()  # Add a stretchable space at the bottom
-
-        # Right column layout
-        right_container = QWidget()
-        right_container.setStyleSheet("background-color: darkred;")
-        right_layout = QVBoxLayout(right_container)
-        self.sim_right_label = QLabel("Combo 2")
-        self.sim_right_label.setStyleSheet(label_stylesheet)
-        self.sim_right_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.sim_right_dropdown_v = QComboBox()
-        self.sim_right_dropdown_v.setStyleSheet(dropdown_stylesheet)
-        self.sim_right_dropdown_c = QComboBox()
-        self.sim_right_dropdown_c.setStyleSheet(dropdown_stylesheet)
-        self.sim_right_hide_cb = QCheckBox("Hide")
-        self.sim_right_wheelie_cb = QCheckBox("Wheelie")
-        self.sim_right_smt_cb = QCheckBox("SMT")
-        self.sim_right_ssmt_cb = QCheckBox("SSMT")
-        right_layout.addStretch()  # Add a stretchable space at the top
-        right_layout.addWidget(self.sim_right_label)
-        right_layout.addWidget(self.sim_right_dropdown_v)
-        right_layout.addWidget(self.sim_right_dropdown_c)
-        right_layout.addWidget(self.sim_right_hide_cb)
-        right_layout.addWidget(self.sim_right_wheelie_cb)
-        right_layout.addWidget(self.sim_right_smt_cb)
-        right_layout.addWidget(self.sim_right_ssmt_cb)
-        right_layout.addStretch()  # Add a stretchable space at the bottom
+        # Create left and right columns using helper method
+        left_container = self.create_sim_column("left", "darkblue", 1)
+        right_container = self.create_sim_column("right", "darkred", 2)
 
         # Middle column layout
         middle_layout = QVBoxLayout()
-        self.sim_status_label = QLabel("Please select a Common.szs file to extract.")
+        middle_layout.setSpacing(2)
+        self.sim_status_label = QLabel("Please select a Common.szs file.")
         middle_layout.addWidget(self.sim_status_label)
 
         # Simulation settings row
@@ -233,11 +215,26 @@ class View(QWidget):
 
         # Time plots widget
         self.sim_widget = TimePlotWidget()
-        middle_layout.addWidget(self.sim_widget)
+        middle_layout.addWidget(self.sim_widget, stretch=1)
+        middle_layout.addStretch()
+
+        # Simulation time slider
+        time_layout = QHBoxLayout()
+        time_label = QLabel("Simulation Time (s):")
+        self.sim_time_slider = QSlider(Qt.Orientation.Horizontal)
+        self.sim_time_slider.setMinimum(3)
+        self.sim_time_slider.setMaximum(20)
+        self.sim_time_slider.setValue(10)
+        self.sim_time_slider.setTickPosition(QSlider.TickPosition.NoTicks)
+        self.sim_time_value_label = QLabel("10")
+        time_layout.addWidget(time_label)
+        time_layout.addWidget(self.sim_time_slider)
+        time_layout.addWidget(self.sim_time_value_label)
+        middle_layout.addLayout(time_layout)
 
         # Add layouts to the main layout
         main_layout.addWidget(left_container)
-        main_layout.addLayout(middle_layout, stretch=3)  # Middle column takes up most of the space
+        main_layout.addLayout(middle_layout, stretch=3)
         main_layout.addWidget(right_container)
 
         self.simulation_tab.setLayout(main_layout)
@@ -544,3 +541,41 @@ class View(QWidget):
 
     def update_chart(self, stats, names):
         self.chart_view.update_data(stats, names)
+
+    def update_sim_stats(self, left_stats, right_stats, sim_mode):
+        """Update the simulation stats labels based on the simulation mode.
+        
+        For acceleration mode: show speed, all std_accel_a values, and T values
+        For mini turbo mode: show speed and mini_turbo
+        """
+        def format_stats(stats_dict, mode):
+            if not stats_dict:
+                return "No stats available"
+            
+            lines = []
+            if 'speed' in stats_dict:
+                lines.append(f"Speed: {stats_dict['speed']:.5g}")
+            
+            if mode == "Acceleration":
+                # Show all acceleration A values
+                for i in range(4):
+                    key = f'std_accel_a{i}'
+                    if key in stats_dict:
+                        lines.append(f"A{i}: {stats_dict[key]:.5g}")
+                # T values
+                for i in range(1, 4):
+                    key = f'std_accel_t{i}'
+                    if key in stats_dict:
+                        lines.append(f"T{i}: {stats_dict[key]:.5g}")
+            elif mode == "Mini-turbo":
+                if 'mini_turbo_duration' in stats_dict:
+                    mt_val = stats_dict['mini_turbo_duration']
+                    lines.append(f"Mini Turbo: {int(mt_val)}")
+            
+            return "\n".join(lines) if lines else "No relevant stats"
+        
+        left_text = format_stats(left_stats, sim_mode)
+        right_text = format_stats(right_stats, sim_mode)
+        
+        self.sim_left_stats_label.setText(left_text)
+        self.sim_right_stats_label.setText(right_text)

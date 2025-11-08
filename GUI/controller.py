@@ -30,12 +30,55 @@ class Controller:
         self.view.sim_diff_checkbox.toggled.connect(self.update_simulation)
         self.view.sim_left_wheelie_cb.toggled.connect(self.update_simulation)
         self.view.sim_right_wheelie_cb.toggled.connect(self.update_simulation)
+        self.view.sim_left_smt_cb.toggled.connect(self.update_simulation)
+        self.view.sim_right_smt_cb.toggled.connect(self.update_simulation)
         self.view.sim_left_ssmt_cb.toggled.connect(self.update_simulation)
         self.view.sim_right_ssmt_cb.toggled.connect(self.update_simulation)
+        self.view.sim_left_hide_cb.toggled.connect(self.update_simulation)
+        self.view.sim_right_hide_cb.toggled.connect(self.update_simulation)
+        self.view.sim_time_slider.valueChanged.connect(self.update_simulation_time)
         self.view.sim_export_button.clicked.connect(lambda: self.view.show_error_message('Export not implemented'))
 
         self.update_status()
         self.populate_dropdowns()
+
+    # Helper methods for code reuse
+    def get_combo_label(self, vehicle, character):
+        """Generate a display label for a vehicle/character combo."""
+        if vehicle == "Vehicle":
+            if character == "Character":
+                return "No selection"
+            else:
+                return character
+        else:
+            if character == "Character":
+                return vehicle
+            else:
+                return f"{vehicle} + {character}"
+
+    def is_valid_combo(self, vehicle, character):
+        """Check if vehicle/character combo is valid."""
+        return vehicle != 'Vehicle' and character != 'Character'
+
+    def block_dropdown_signals(self, prefix):
+        """Block signals for dropdowns with given prefix."""
+        getattr(self.view, f"{prefix}_dropdown_v").blockSignals(True)
+        getattr(self.view, f"{prefix}_dropdown_c").blockSignals(True)
+
+    def unblock_dropdown_signals(self, prefix):
+        """Unblock signals for dropdowns with given prefix."""
+        getattr(self.view, f"{prefix}_dropdown_v").blockSignals(False)
+        getattr(self.view, f"{prefix}_dropdown_c").blockSignals(False)
+
+    def sync_dropdown_pair(self, source_prefix, target_prefix,
+                          vehicle, character):
+        """Sync dropdown values from source to target."""
+        self.block_dropdown_signals(target_prefix)
+        getattr(self.view, f"{target_prefix}_dropdown_v") \
+            .setCurrentText(vehicle)
+        getattr(self.view, f"{target_prefix}_dropdown_c") \
+            .setCurrentText(character)
+        self.unblock_dropdown_signals(target_prefix)
 
     def update_status(self):
         if os.path.exists('kartParam.bin') and os.path.exists('driverParam.bin'):
@@ -92,27 +135,8 @@ class Controller:
         stats1 = self.model.get_basic_stats(vehicle1, character1)
         stats2 = self.model.get_basic_stats(vehicle2, character2)
 
-        if vehicle1 == "Vehicle":
-            if character1 == "Character":
-                label1 = "No selection"
-            else:
-                label1 = character1
-        else:
-            if character1 == "Character":
-                label1 = vehicle1
-            else:
-                label1 = f"{vehicle1} + {character1}"
-
-        if vehicle2 == "Vehicle":
-            if character2 == "Character":
-                label2 = "No selection"
-            else:
-                label2 = character2
-        else:
-            if character2 == "Character":
-                label2 = vehicle2
-            else:
-                label2 = f"{vehicle2} + {character2}"
+        label1 = self.get_combo_label(vehicle1, character1)
+        label2 = self.get_combo_label(vehicle2, character2)
 
         # Turn dicts into lists
         keys = ["speed", "mini_turbo", "drift", "acceleration", "offroad", "weight", "handling"]
@@ -122,37 +146,22 @@ class Controller:
 
         # Also update advanced stats panel with raw per-field values
         # Request advanced stats if either a vehicle or character (or both) is selected
-        adv1 = self.model.get_advanced_stats(vehicle1, character1) if (vehicle1 != 'Vehicle' or character1 != 'Character') else {}
-        adv2 = self.model.get_advanced_stats(vehicle2, character2) if (vehicle2 != 'Vehicle' or character2 != 'Character') else {}
+        adv1 = self.model.get_advanced_stats(vehicle1, character1) \
+            if self.is_valid_combo(vehicle1, character1) else {}
+        adv2 = self.model.get_advanced_stats(vehicle2, character2) \
+            if self.is_valid_combo(vehicle2, character2) else {}
         self.view.update_advanced_stats(adv1, adv2)
 
         # Sync advanced combos to basic selections
-        self.view.advanced_left_dropdown_v.blockSignals(True)
-        self.view.advanced_left_dropdown_c.blockSignals(True)
-        self.view.advanced_right_dropdown_v.blockSignals(True)
-        self.view.advanced_right_dropdown_c.blockSignals(True)
-        self.view.advanced_left_dropdown_v.setCurrentText(vehicle1)
-        self.view.advanced_left_dropdown_c.setCurrentText(character1)
-        self.view.advanced_right_dropdown_v.setCurrentText(vehicle2)
-        self.view.advanced_right_dropdown_c.setCurrentText(character2)
-        self.view.advanced_left_dropdown_v.blockSignals(False)
-        self.view.advanced_left_dropdown_c.blockSignals(False)
-        self.view.advanced_right_dropdown_v.blockSignals(False)
-        self.view.advanced_right_dropdown_c.blockSignals(False)
+        self.sync_dropdown_pair("left", "advanced_left", vehicle1, character1)
+        self.sync_dropdown_pair("right", "advanced_right", vehicle2, character2)
 
         # Sync simulation combos to basic selections
-        self.view.sim_left_dropdown_v.blockSignals(True)
-        self.view.sim_left_dropdown_c.blockSignals(True)
-        self.view.sim_right_dropdown_v.blockSignals(True)
-        self.view.sim_right_dropdown_c.blockSignals(True)
-        self.view.sim_left_dropdown_v.setCurrentText(vehicle1)
-        self.view.sim_left_dropdown_c.setCurrentText(character1)
-        self.view.sim_right_dropdown_v.setCurrentText(vehicle2)
-        self.view.sim_right_dropdown_c.setCurrentText(character2)
-        self.view.sim_left_dropdown_v.blockSignals(False)
-        self.view.sim_left_dropdown_c.blockSignals(False)
-        self.view.sim_right_dropdown_v.blockSignals(False)
-        self.view.sim_right_dropdown_c.blockSignals(False)
+        self.sync_dropdown_pair("left", "sim_left", vehicle1, character1)
+        self.sync_dropdown_pair("right", "sim_right", vehicle2, character2)
+
+        # Update simulation UI to reflect the synced selections
+        self.update_simulation_ui()
 
 
     def update_simulation(self):
@@ -163,88 +172,195 @@ class Controller:
         right_character = self.view.sim_right_dropdown_c.currentText()
 
         # Sync basic combos to simulation selections
-        self.view.left_dropdown_v.blockSignals(True)
-        self.view.left_dropdown_c.blockSignals(True)
-        self.view.right_dropdown_v.blockSignals(True)
-        self.view.right_dropdown_c.blockSignals(True)
-        self.view.left_dropdown_v.setCurrentText(left_vehicle)
-        self.view.left_dropdown_c.setCurrentText(left_character)
-        self.view.right_dropdown_v.setCurrentText(right_vehicle)
-        self.view.right_dropdown_c.setCurrentText(right_character)
-        self.view.left_dropdown_v.blockSignals(False)
-        self.view.left_dropdown_c.blockSignals(False)
-        self.view.right_dropdown_v.blockSignals(False)
-        self.view.right_dropdown_c.blockSignals(False)
+        self.sync_dropdown_pair("sim_left", "left", left_vehicle, left_character)
+        self.sync_dropdown_pair("sim_right", "right", right_vehicle, right_character)
 
         # Sync advanced combos to simulation selections
-        self.view.advanced_left_dropdown_v.blockSignals(True)
-        self.view.advanced_left_dropdown_c.blockSignals(True)
-        self.view.advanced_right_dropdown_v.blockSignals(True)
-        self.view.advanced_right_dropdown_c.blockSignals(True)
-        self.view.advanced_left_dropdown_v.setCurrentText(left_vehicle)
-        self.view.advanced_left_dropdown_c.setCurrentText(left_character)
-        self.view.advanced_right_dropdown_v.setCurrentText(right_vehicle)
-        self.view.advanced_right_dropdown_c.setCurrentText(right_character)
-        self.view.advanced_left_dropdown_v.blockSignals(False)
-        self.view.advanced_left_dropdown_c.blockSignals(False)
-        self.view.advanced_right_dropdown_v.blockSignals(False)
-        self.view.advanced_right_dropdown_c.blockSignals(False)
+        self.sync_dropdown_pair("sim_left", "advanced_left", left_vehicle, left_character)
+        self.sync_dropdown_pair("sim_right", "advanced_right", right_vehicle, right_character)
 
         # After syncing without signals, manually refresh the shared UI
         # so the Basic stats tab and advanced stats reflect the simulation selection.
         self.update_chart()
 
-        # Get checkbox states
-        left_wheelie = self.view.sim_left_wheelie_cb.isChecked()
-        left_ssmt = self.view.sim_left_ssmt_cb.isChecked()
-        right_wheelie = self.view.sim_right_wheelie_cb.isChecked()
-        right_ssmt = self.view.sim_right_ssmt_cb.isChecked()
+        # Update simulation-specific UI (timeplot and stats labels)
+        self.update_simulation_ui()
 
-        # Simulate acceleration
-        if left_vehicle != 'Vehicle' and left_character != 'Character':
-            left_result = self.model.simulate_accel(left_vehicle, left_character, wheelie=left_wheelie, ssmt=left_ssmt)
-            if left_result:
-                left_speeds, left_distances = left_result
+
+    def update_simulation_ui(self):
+        # Get simulation tab selections
+        left_vehicle = self.view.sim_left_dropdown_v.currentText()
+        left_character = self.view.sim_left_dropdown_c.currentText()
+        right_vehicle = self.view.sim_right_dropdown_v.currentText()
+        right_character = self.view.sim_right_dropdown_c.currentText()
+
+        # Get simulation type
+        sim_type = self.view.sim_type_dropdown.currentText()
+        sim_time = self.view.sim_time_slider.value()
+
+        # Get checkbox states (only consider logically enabled checkboxes)
+        left_wheelie = self.view.sim_left_wheelie_cb.isChecked()
+        left_ssmt = self.view.sim_left_ssmt_cb.isChecked() and sim_type == "Acceleration"  # SSMT only for acceleration
+        left_smt = self.view.sim_left_smt_cb.isChecked() and sim_type == "Mini-turbo"  # SMT only for mini-turbo
+        right_wheelie = self.view.sim_right_wheelie_cb.isChecked()
+        right_ssmt = self.view.sim_right_ssmt_cb.isChecked() and sim_type == "Acceleration"  # SSMT only for acceleration
+        right_smt = self.view.sim_right_smt_cb.isChecked() and sim_type == "Mini-turbo"  # SMT only for mini-turbo
+
+        # Simulate based on type
+        if sim_type == "Acceleration":
+            if left_vehicle != 'Vehicle' and left_character != 'Character':
+                left_result = self.model.simulate_accel(left_vehicle, left_character, total_time=sim_time, wheelie=left_wheelie, ssmt=left_ssmt)
+                if left_result:
+                    left_speeds, left_distances = left_result
+                else:
+                    left_speeds, left_distances = [], []
             else:
                 left_speeds, left_distances = [], []
-        else:
-            left_speeds, left_distances = [], []
 
-        if right_vehicle != 'Vehicle' and right_character != 'Character':
-            right_result = self.model.simulate_accel(right_vehicle, right_character, wheelie=right_wheelie, ssmt=right_ssmt)
-            if right_result:
-                right_speeds, right_distances = right_result
+            if right_vehicle != 'Vehicle' and right_character != 'Character':
+                right_result = self.model.simulate_accel(right_vehicle, right_character, total_time=sim_time, wheelie=right_wheelie, ssmt=right_ssmt)
+                if right_result:
+                    right_speeds, right_distances = right_result
+                else:
+                    right_speeds, right_distances = [], []
             else:
                 right_speeds, right_distances = [], []
-        else:
-            right_speeds, right_distances = [], []
+        else:  # "Mini-turbo"
+            if left_vehicle != 'Vehicle' and left_character != 'Character':
+                left_result = self.model.simulate_mini_turbo(left_vehicle, left_character, post_time=sim_time, wheelie=left_wheelie, SMT=left_smt)
+                if left_result:
+                    left_speeds, left_distances = left_result
+                else:
+                    left_speeds, left_distances = [], []
+            else:
+                left_speeds, left_distances = [], []
+
+            if right_vehicle != 'Vehicle' and right_character != 'Character':
+                right_result = self.model.simulate_mini_turbo(right_vehicle, right_character, post_time=sim_time, wheelie=right_wheelie, SMT=right_smt)
+                if right_result:
+                    right_speeds, right_distances = right_result
+                else:
+                    right_speeds, right_distances = [], []
+            else:
+                right_speeds, right_distances = [], []
 
         # Update time plot
-        self.view.sim_widget.update_data(left_speeds, left_distances, right_speeds, right_distances, (f"{left_vehicle} + {left_character}", f"{right_vehicle} + {right_character}"))
+        left_selected = left_vehicle != 'Vehicle' and \
+            left_character != 'Character'
+        right_selected = right_vehicle != 'Vehicle' and \
+            right_character != 'Character'
+        diff_mode = self.view.sim_diff_checkbox.isChecked()
+        left_hidden = self.view.sim_left_hide_cb.isChecked()
+        right_hidden = self.view.sim_right_hide_cb.isChecked()
+        self.view.sim_widget.update_data(
+            left_speeds, left_distances, right_speeds, right_distances,
+            left_selected, right_selected, diff_mode=diff_mode,
+            left_hidden=left_hidden, right_hidden=right_hidden)
 
+        # Update stats display
+        left_stats = self.model.get_advanced_stats(left_vehicle,
+                                                   left_character) \
+            if left_selected else {}
+        right_stats = self.model.get_advanced_stats(right_vehicle,
+                                                    right_character) \
+            if right_selected else {}
+        self.view.update_sim_stats(left_stats, right_stats, sim_type)
+
+        # Update UI element enabled states based on current selections
+        left_valid = self.is_valid_combo(left_vehicle, left_character)
+        right_valid = self.is_valid_combo(right_vehicle, right_character)
+        has_valid_combo = left_valid or right_valid
+        has_both_valid = left_valid and right_valid
+
+        # Define stylesheets for enabled/disabled checkboxes
+        normal_style = """
+            QCheckBox {
+                color: #ffffff;
+            }
+            QCheckBox::indicator {
+                background-color: #3e3e3e;
+                border: 1px solid #00ffff;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #00ffff;
+            }
+        """
+        disabled_style = """
+            QCheckBox {
+                color: #888888;
+            }
+            QCheckBox::indicator {
+                background-color: #cccccc;
+                border: 1px solid #888888;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #888888;
+            }
+        """
+
+        # SMT checkboxes: enabled only for mini-turbo
+        smt_enabled = sim_type == "Mini-turbo"
+        self.view.sim_left_smt_cb.setEnabled(True)
+        self.view.sim_right_smt_cb.setEnabled(True)
+        style = normal_style if smt_enabled else disabled_style
+        self.view.sim_left_smt_cb.setStyleSheet(style)
+        self.view.sim_right_smt_cb.setStyleSheet(style)
+        if not smt_enabled:
+            self.view.sim_left_smt_cb.setChecked(False)
+            self.view.sim_right_smt_cb.setChecked(False)
+
+        # SSMT checkboxes: enabled only for acceleration
+        ssmt_enabled = sim_type == "Acceleration"
+        self.view.sim_left_ssmt_cb.setEnabled(True)
+        self.view.sim_right_ssmt_cb.setEnabled(True)
+        style = normal_style if ssmt_enabled else disabled_style
+        self.view.sim_left_ssmt_cb.setStyleSheet(style)
+        self.view.sim_right_ssmt_cb.setStyleSheet(style)
+        if not ssmt_enabled:
+            self.view.sim_left_ssmt_cb.setChecked(False)
+            self.view.sim_right_ssmt_cb.setChecked(False)
+
+        # Differential mode: enabled only when both combos are valid
+        self.view.sim_diff_checkbox.setEnabled(True)
+        style = normal_style if has_both_valid else disabled_style
+        self.view.sim_diff_checkbox.setStyleSheet(style)
+        if not has_both_valid:
+            self.view.sim_diff_checkbox.setChecked(False)
+
+        # Hide checkboxes: disabled when differential mode is active
+        hide_enabled = not diff_mode
+        style = normal_style if hide_enabled else disabled_style
+        self.view.sim_left_hide_cb.setEnabled(hide_enabled)
+        self.view.sim_right_hide_cb.setEnabled(hide_enabled)
+        self.view.sim_left_hide_cb.setStyleSheet(style)
+        self.view.sim_right_hide_cb.setStyleSheet(style)
+        if not hide_enabled:
+            self.view.sim_left_hide_cb.setChecked(False)
+            self.view.sim_right_hide_cb.setChecked(False)
+
+        # Export button: enabled only when there's at least one valid combo
+        self.view.sim_export_button.setEnabled(has_valid_combo)
+
+    def update_simulation_time(self, value):
+        self.view.sim_time_value_label.setText(str(value))
+        self.update_simulation()
 
     def update_advanced(self):
         left_vehicle = self.view.advanced_left_dropdown_v.currentText()
         left_character = self.view.advanced_left_dropdown_c.currentText()
         right_vehicle = self.view.advanced_right_dropdown_v.currentText()
         right_character = self.view.advanced_right_dropdown_c.currentText()
-        adv1 = self.model.get_advanced_stats(left_vehicle, left_character) if (left_vehicle != 'Vehicle' or left_character != 'Character') else {}
-        adv2 = self.model.get_advanced_stats(right_vehicle, right_character) if (right_vehicle != 'Vehicle' or right_character != 'Character') else {}
+        adv1 = self.model.get_advanced_stats(left_vehicle, left_character) \
+            if self.is_valid_combo(left_vehicle, left_character) else {}
+        adv2 = self.model.get_advanced_stats(right_vehicle, right_character) \
+            if self.is_valid_combo(right_vehicle, right_character) else {}
         self.view.update_advanced_stats(adv1, adv2)
 
         # Sync basic combos to advanced selections
-        self.view.left_dropdown_v.blockSignals(True)
-        self.view.left_dropdown_c.blockSignals(True)
-        self.view.right_dropdown_v.blockSignals(True)
-        self.view.right_dropdown_c.blockSignals(True)
-        self.view.left_dropdown_v.setCurrentText(left_vehicle)
-        self.view.left_dropdown_c.setCurrentText(left_character)
-        self.view.right_dropdown_v.setCurrentText(right_vehicle)
-        self.view.right_dropdown_c.setCurrentText(right_character)
-        self.view.left_dropdown_v.blockSignals(False)
-        self.view.left_dropdown_c.blockSignals(False)
-        self.view.right_dropdown_v.blockSignals(False)
-        self.view.right_dropdown_c.blockSignals(False)
+        self.sync_dropdown_pair("advanced_left", "left", left_vehicle,
+                                left_character)
+        self.sync_dropdown_pair("advanced_right", "right", right_vehicle,
+                                right_character)
         # After syncing without signals, manually refresh the shared UI
         # so the Basic stats tab reflects the advanced selection.
         self.update_chart()

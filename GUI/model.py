@@ -44,6 +44,19 @@ class Model:
         self.selected_file = None
         load_global_stats()
 
+    # Helper methods for code reuse
+    def _find_vehicle_unit(self, name):
+        """Find a vehicle unit by name."""
+        return next((v for v in global_vehicles if v.name == name), None)
+
+    def _find_character_unit(self, name):
+        """Find a character unit by name."""
+        return next((c for c in global_characters if c.name == name), None)
+
+    def _get_unit_stats(self, unit):
+        """Get basic stats from a unit, returning None if unit is None."""
+        return unit.get_basic_stats() if unit else None
+
     def set_selected_file(self, file_path):
         self.selected_file = file_path
 
@@ -63,29 +76,18 @@ class Model:
     def get_basic_stats(self, vehicle: str, character: str) -> list:
         # Return stats for the given character or vehicle
         # Stats are globally loaded; assume available since tabs are gated
-        vehicles = global_vehicles
-        characters = global_characters
-        vehicle_stats = None
-        character_stats = None
-
-        for v in vehicles:
-            if v.name == vehicle:
-                vehicle_stats = v.get_basic_stats()
-                break
-
-        for c in characters:
-            if c.name == character:
-                character_stats = c.get_basic_stats()
-                break
+        vehicle_stats = self._get_unit_stats(self._find_vehicle_unit(vehicle))
+        character_stats = self._get_unit_stats(self._find_character_unit(character))
         
         if vehicle_stats is None and character_stats is None:
             return EMPTY_DICT()
         elif vehicle_stats is None:
-            norm_stats = normalise_stats(c_stats=character_stats, characters=characters)
+            norm_stats = normalise_stats(c_stats=character_stats, characters=global_characters)
         elif character_stats is None:
-            norm_stats = normalise_stats(v_stats=vehicle_stats, vehicles=vehicles)
+            norm_stats = normalise_stats(v_stats=vehicle_stats, vehicles=global_vehicles)
         else:
-            norm_stats = normalise_stats(v_stats=vehicle_stats, c_stats=character_stats, vehicles=vehicles, characters=characters)
+            norm_stats = normalise_stats(v_stats=vehicle_stats, c_stats=character_stats, 
+                                       vehicles=global_vehicles, characters=global_characters)
 
         return norm_stats
 
@@ -93,37 +95,32 @@ class Model:
         """Wrapper that delegates simulation to the logic layer (logic.simulation).
 
         Keeps the Model API stable while moving logic out of the GUI module.
+        Returns (speeds, distances) in units per frame (u/f).
         """
         # Use globally cached StatsBase objects and pass basic-stats dicts into the
         # pure simulation function.
-        v_unit = next((v for v in global_vehicles if v.name == vehicle), None)
-        c_unit = next((c for c in global_characters if c.name == character), None)
-
-        vstats = v_unit.get_basic_stats() if v_unit else None
-        cstats = c_unit.get_basic_stats() if c_unit else None
+        vstats = self._get_unit_stats(self._find_vehicle_unit(vehicle))
+        cstats = self._get_unit_stats(self._find_character_unit(character))
 
         return sim.simulate_accel(vstats, cstats, wheelie=wheelie, ssmt=ssmt, time=total_time)
 
-    def simulate_mini_turbo(self, vehicle: str, character: str, post_time: float = 3.0):
+    def simulate_mini_turbo(self, vehicle: str, character: str, post_time: float = 3.0, wheelie: bool = False, SMT: bool = False):
         """Wrapper that delegates post-release simulation to logic.simulation.
 
         The initial speed used for the post-release simulation is the combo's
         drifting top speed (vehicle.speed_in_turn + character.speed_in_turn).
+        Returns (speeds, distances) in units per frame (u/f).
         """
-        v_unit = next((v for v in global_vehicles if v.name == vehicle), None)
-        c_unit = next((c for c in global_characters if c.name == character), None)
-
         # Note: simulation expects basic-stats dicts; use get_basic_stats()
-        vstats = v_unit.get_basic_stats() if v_unit else None
-        cstats = c_unit.get_basic_stats() if c_unit else None
+        vstats = self._get_unit_stats(self._find_vehicle_unit(vehicle))
+        cstats = self._get_unit_stats(self._find_character_unit(character))
 
-        return sim.simulate_mini_turbo(vstats, cstats, time=post_time)
+        return sim.simulate_mini_turbo(vstats, cstats, wheelie=wheelie, SMT=SMT, time=post_time)
     
     def get_advanced_stats(self, vehicle: str, character: str) -> dict:
         """Return advanced stats from stored attributes, summed for combo."""
-        v_unit = next((v for v in global_vehicles if v.name == vehicle), None)
-        c_unit = next(
-            (c for c in global_characters if c.name == character), None)
+        v_unit = self._find_vehicle_unit(vehicle)
+        c_unit = self._find_character_unit(character)
 
         v_dict = v_unit.get_advanced_stats() if v_unit else {}
         c_dict = c_unit.get_advanced_stats() if c_unit else {}
