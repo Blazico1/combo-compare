@@ -10,7 +10,8 @@ def simulate_accel(vstats, cstats, wheelie=False, ssmt=False, time=10.0):
     Returns (speeds, distances) in units per frame (u/f).
     """
     if vstats is None and cstats is None:
-        return None
+        # Return empty times/speeds/distances to avoid callers indexing into None
+        return np.array([]), np.array([]), np.array([])
 
     v_speed = vstats.get('speed', 0)
     c_speed = cstats.get('speed', 0) 
@@ -67,7 +68,8 @@ def simulate_accel(vstats, cstats, wheelie=False, ssmt=False, time=10.0):
         speeds.append(current_speed)
         distances.append(current_distance)
 
-    return np.array(speeds), np.array(distances)
+    times = np.arange(frame_count) / 60.0
+    return times, np.array(speeds), np.array(distances)
 
 
 def simulate_mini_turbo(vstats, cstats, wheelie=False, SMT=False, time=10.0):
@@ -78,7 +80,8 @@ def simulate_mini_turbo(vstats, cstats, wheelie=False, SMT=False, time=10.0):
     Returns (speeds, distances) in units per frame (u/f).
     """
     if vstats is None and cstats is None:
-        return None
+        # Return empty times/speeds/distances to avoid callers indexing into None
+        return np.array([]), np.array([]), np.array([])
 
     # Compute combined speed and accel arrays similar to simulate_combo
     v_speed = vstats.get('speed', 0)
@@ -124,7 +127,9 @@ def simulate_mini_turbo(vstats, cstats, wheelie=False, SMT=False, time=10.0):
         speeds.append(current_speed)
         distances.append(current_distance)
 
-    return np.array(speeds), np.array(distances)
+    # Build times array (seconds) matching 60 FPS samples
+    times = np.arange(len(speeds)) / 60.0
+    return times, np.array(speeds), np.array(distances)
 
 
 def calc_acceleration(speed, top_speed, acceleration_values, t_values):
