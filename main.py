@@ -38,6 +38,25 @@ def main():
             background: #00ffff;
             color: #2e2e2e;
         }
+        QCheckBox {
+            color: #ffffff;
+            spacing: 6px;
+        }
+        QCheckBox::indicator {
+            width: 14px;
+            height: 14px;
+        }
+        QCheckBox::indicator:unchecked {
+            border: 1px solid #00ffff;
+            background: #2e2e2e;
+        }
+        QCheckBox::indicator:checked {
+            border: 1px solid #00ffff;
+            background: #00ffff;
+        }
+        QCheckBox::indicator:checked:hover {
+            background: #33ffff;
+        }
     """
 
     # Apply the stylesheet to the application

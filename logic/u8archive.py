@@ -1,6 +1,6 @@
 import struct
-import oead
 import os
+from logic.yaz0 import decompress as yaz0_decompress
 
 class Node:
     def __init__(self, node_type, name_offset, data_offset_or_parent_index, size_or_next_node_index):
@@ -25,8 +25,8 @@ class U8Archive:
         try:
             with open(path, 'rb') as f:
                 data = f.read()
-        except FileNotFoundError:
-            raise ValueError(f"File {path} not found")
+        except FileNotFoundError as exc:
+            raise ValueError(f"File {path} not found") from exc
         
         self.data = self._decompress_data(data)
         self.header = self._parse_header()
@@ -35,7 +35,7 @@ class U8Archive:
 
     def _decompress_data(self, data):
         if data[:4] == b'Yaz0':
-            return oead.yaz0.decompress(data)
+            return yaz0_decompress(data)
         return data
 
     def _parse_header(self):

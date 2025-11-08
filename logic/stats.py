@@ -84,6 +84,9 @@ class StatsBase:
         weight = self.weight
         handling = self.manual_handling
 
+        # Calculate weighted average acceleration based on T thresholds
+        acceleration = self._calculate_weighted_acceleration(As, Ts)
+
         stats = {
             "speed": speed,
             "mini_turbo": mini_turbo,
@@ -93,8 +96,82 @@ class StatsBase:
             "offroad": offroad,
             "weight": weight,
             "handling": handling,
-            "acceleration": np.sum(As)
+            "acceleration": acceleration
 
+        }
+        return stats
+
+    def _calculate_weighted_acceleration(self, As, Ts):
+        """Calculate weighted average acceleration based on T thresholds.
+        
+        The T values define speed fractions where acceleration changes:
+        - 0 to T1: acceleration A0
+        - T1 to T2: acceleration A1
+        - T2 to T3: acceleration A2  
+        - T3 to 1.0: acceleration A3
+        
+        Returns the weighted average acceleration.
+        """
+        # Ensure T values are sorted and clamped to [0, 1]
+        sorted_ts = sorted([max(0, min(1, t)) for t in Ts])
+        
+        # Add 0 at the beginning and 1 at the end
+        t_ranges = [0] + sorted_ts + [1.0]
+        
+        weighted_sum = 0
+        total_weight = 0
+        
+        for i in range(len(t_ranges) - 1):
+            # Weight is the size of this speed range
+            weight = t_ranges[i + 1] - t_ranges[i]
+            # Acceleration for this range
+            accel = As[min(i, len(As) - 1)]  # Use last A if we run out
+            
+            weighted_sum += accel * weight
+            total_weight += weight
+            
+        # Return weighted average
+        return weighted_sum / total_weight if total_weight > 0 else 0
+
+    def get_advanced_stats(self):
+        stats = {
+            'num_tires': self.num_tires,
+            'drift_type': self.drift_type,
+            'weight_class': self.weight_class,
+            'unknown': self.unknown,
+            'weight': self.weight,
+            'bump_deviation': self.bump_deviation,
+            'speed': self.speed,
+            'speed_in_turn': self.speed_in_turn,
+            'tilt': self.tilt,
+            'std_accel_a0': self.std_accel_a0,
+            'std_accel_a1': self.std_accel_a1,
+            'std_accel_a2': self.std_accel_a2,
+            'std_accel_a3': self.std_accel_a3,
+            'std_accel_t1': self.std_accel_t1,
+            'std_accel_t2': self.std_accel_t2,
+            'std_accel_t3': self.std_accel_t3,
+            'drift_accel_a0': self.drift_accel_a0,
+            'drift_accel_a1': self.drift_accel_a1,
+            'drift_accel_t1': self.drift_accel_t1,
+            'manual_handling': self.manual_handling,
+            'auto_handling': self.auto_handling,
+            'handling_reactivity': self.handling_reactivity,
+            'manual_drift': self.manual_drift,
+            'auto_drift': self.auto_drift,
+            'drift_reactivity': self.drift_reactivity,
+            'outside_drift_angle': self.outside_drift_angle,
+            'outside_drift_decrement': self.outside_drift_decrement,
+            'mini_turbo_duration': self.mini_turbo_duration,
+            'speed_multipliers': self.speed_multipliers,
+            'rotation_multipliers': self.rotation_multipliers,
+            'rotating_items_z_radius': self.rotating_items_z_radius,
+            'rotating_items_x_radius': self.rotating_items_x_radius,
+            'rotating_items_y_distance': self.rotating_items_y_distance,
+            'rotating_items_z_distance': self.rotating_items_z_distance,
+            'max_normal_accel': self.max_normal_accel,
+            'mega_mushroom_scale': self.mega_mushroom_scale,
+            'tire_distance': self.tire_distance
         }
         return stats
 
@@ -157,9 +234,7 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
     if vehicles:
         for vehicle in vehicles:
             vstats = vehicle.get_basic_stats()
-            v_As = vstats["As"]
-            v_Ts = vstats["Ts"]
-            accel = calc_distance_traveled(0, vstats["speed"], v_As, v_Ts, 5)
+            accel = vstats["acceleration"]  # Use pre-calculated weighted average
             max_accel = max(max_accel, accel)
             min_accel = min(min_accel, accel)
 
@@ -184,7 +259,19 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
     if vehicles:
         stats["As"] = [v + c for v, c in zip(v_stats["As"], c_stats["As"])]
         stats["Ts"] = v_stats["Ts"]
-        stats["acceleration"] = calc_distance_traveled(0, stats["speed"], stats["As"], stats["Ts"], 5)
+        # Calculate weighted average acceleration for combined stats
+        As_combined = stats["As"]
+        Ts_combined = stats["Ts"]
+        sorted_ts = sorted([max(0, min(1, t)) for t in Ts_combined])
+        t_ranges = [0] + sorted_ts + [1.0]
+        weighted_sum = 0
+        total_weight = 0
+        for i in range(len(t_ranges) - 1):
+            weight = t_ranges[i + 1] - t_ranges[i]
+            accel = As_combined[min(i, len(As_combined) - 1)]
+            weighted_sum += accel * weight
+            total_weight += weight
+        stats["acceleration"] = weighted_sum / total_weight if total_weight > 0 else 0
 
 
     # Normalise the stats
@@ -261,74 +348,4 @@ def set_names(units: list[StatsBase], is_driver: bool):
         else:
             unit.is_vehicle()
 
-def calc_acceleration(speed, top_speed, acceleration_values, t_values):
-    """
-    Calculate the acceleration based on the current speed and top speed.
-
-    :param speed: Current speed of the vehicle.
-    :param top_speed: Top speed of the vehicle.
-    :param acceleration_values: List of acceleration values (A0 to A4).
-    :param t_values: List of T values (T1 to T3).
-    :return: Calculated acceleration.
-    """
-    T = speed / top_speed
-
-    if T <= 0:
-        return acceleration_values[0]
-    elif T >= 1:
-        return 0
-
-    # Interpolate between the data points
-    T_values_with_zero = [0] + t_values
-    for i in range(1, len(T_values_with_zero)):
-        if T < T_values_with_zero[i]:
-            T0 = T_values_with_zero[i - 1]
-            T1 = T_values_with_zero[i]
-            A0 = acceleration_values[i - 1]
-            A1 = acceleration_values[i]
-            return A0 + (A1 - A0) * ((T - T0) / (T1 - T0))
-
-
-    return acceleration_values[-1]
-
-def generate_data_points(initial_speed, top_speed, acceleration_values, t_values, total_time):
-    """
-    Generate data points for speed, acceleration and distance over time.
-
-    :param initial_speed: Initial speed of the vehicle.
-    :param top_speed: Top speed of the vehicle.
-    :param acceleration_values: List of acceleration values (A0 to A4).
-    :param t_values: List of T values (T1 to T3).
-    :param total_time: Total time to generate data points for.
-    :return: Tuple of lists (times, speeds, accelerations).
-    """
-    times = np.arange(0, total_time, 1/60)  # 60 FPS
-    speeds = []
-    accelerations = []
-    distances = []
-    current_speed = initial_speed
-
-    for t in times:
-        acceleration = calc_acceleration(current_speed, top_speed, acceleration_values, t_values)
-        current_speed += acceleration  # Update speed based on acceleration
-        if current_speed > top_speed:
-            current_speed = top_speed
-        speeds.append(current_speed)
-        accelerations.append(acceleration)
-
-    distances = np.cumsum(speeds)
-    return times, speeds, accelerations, distances
-
-def calc_distance_traveled(speed, top_speed, acceleration_values, t_values, total_time):
-    """
-    Calculate the distance traveled over time.
-
-    :param speed: Current speed of the vehicle.
-    :param top_speed: Top speed of the vehicle.
-    :param acceleration_values: List of acceleration values (A0 to A4).
-    :param t_values: List of T values (T1 to T3).
-    :param total_time: Total time to calculate the distance traveled.
-    :return: Distance traveled over time.
-    """
-    times, speeds, accelerations, distances = generate_data_points(speed, top_speed, acceleration_values, t_values, total_time)
-    return distances[-1]
+# generate_data_points and calc_acceleration_distance were moved to logic/simulation.py
