@@ -1,95 +1,69 @@
-# Game data files
 *.szs
 *.bin
+.vscode
+__pycache__
+main.spec
+build/
+dist/main.dist/
+dist/main.build/
+dist/main.onefile-build/
+dist/bins/
+setup.py
 
 # Python
-__pycache__/
 *.py[cod]
-*$py.class
-*.so
+*.pyo
+*.pyd
+__pycache__/
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-*.manifest
-*.spec
-*.exe
-*.onefile-build/
-*.dist/
-
-# Virtual environments
-venv/
-.venv/
-ENV/
 env/
+venv/
+venv.bak/
+.venv/
 
-# IDE
-.vscode/
+# Logs and runtime files
+*.log
+*.err.log
+*.pid
+backend.pid
+frontend.pid
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+package-lock.json
+yarn.lock
+npm-debug.log
+
+# IDEs and editors
 .idea/
-*.swp
-*.swo
-*~
+.vscode/
+.history/
 
-# OS
+# Build / cache
+.cache/
+.parcel-cache/
+.turbo/
+.next/
+.nuxt/
+.vite/
+dist/
+coverage/
+.pytest_cache/
+.mypy_cache/
+
+# System
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
-report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
-node-v*/
-node.zip
-node-installer.msi
+# Environment files
+.env
+.env.local
+.env.*.local
 
-# Build outputs
-dist/
-build/
-*.log
-*.pid
-
-# Development files
-start_web.ps1
-stop_web.ps1
-run.bat
-start_backend.ps1
-dev.bat
-install.bat
-
-# Documentation (keep only main README.md)
-README_WEB.md
-WEB_README.md
-EXECUTABLE_DEPLOYMENT.md
-SIMPLE_DEPLOYMENT.md
-
-# Deployment files
-deployment/
-build-linux-executable.sh
-deploy-vps.sh
-
-# GitHub templates
-.github/
+# Temporary
+*.tmp
+*.temp
+*.bak

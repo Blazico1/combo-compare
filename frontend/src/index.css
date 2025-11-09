@@ -1,0 +1,14 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #2e2e2e;
+  color: white;
+}
+
+#root {
+  min-height: 100vh;
+}
