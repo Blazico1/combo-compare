@@ -49,6 +49,16 @@ function App() {
   const [simulationResult, setSimulationResult] = useState(null)
   const [loading, setLoading] = useState(false)
 
+  // Collapsible sections state: default all closed except core
+  const [openSections, setOpenSections] = useState({
+    classification: false,
+    core: true,
+    acceleration: false,
+    speed: false,
+    rotation: false,
+    misc: false,
+  })
+
   // Load initial data
   useEffect(() => {
     loadVehicles()
@@ -265,13 +275,13 @@ function App() {
     <div className="basic-stats-layout">
       <div className="combo-column combo1">
         <h3>Combo 1</h3>
-        <select value={selectedVehicle1} onChange={(e) => setSelectedVehicle1(e.target.value)}>
+  <select className="combo1-select" value={selectedVehicle1} onChange={(e) => setSelectedVehicle1(e.target.value)}>
           <option value="">Select Vehicle</option>
           {vehicles.map(vehicle => (
             <option key={vehicle.id} value={vehicle.id}>{vehicle.name}</option>
           ))}
         </select>
-        <select value={selectedCharacter1} onChange={(e) => setSelectedCharacter1(e.target.value)}>
+  <select className="combo1-select" value={selectedCharacter1} onChange={(e) => setSelectedCharacter1(e.target.value)}>
           <option value="">Select Character</option>
           {characters.map(character => (
             <option key={character.id} value={character.id}>{character.name}</option>
@@ -322,13 +332,13 @@ function App() {
 
       <div className="combo-column combo2">
         <h3>Combo 2</h3>
-        <select value={selectedVehicle2} onChange={(e) => setSelectedVehicle2(e.target.value)}>
+  <select className="combo2-select" value={selectedVehicle2} onChange={(e) => setSelectedVehicle2(e.target.value)}>
           <option value="">Select Vehicle</option>
           {vehicles.map(vehicle => (
             <option key={vehicle.id} value={vehicle.id}>{vehicle.name}</option>
           ))}
         </select>
-        <select value={selectedCharacter2} onChange={(e) => setSelectedCharacter2(e.target.value)}>
+  <select className="combo2-select" value={selectedCharacter2} onChange={(e) => setSelectedCharacter2(e.target.value)}>
           <option value="">Select Character</option>
           {characters.map(character => (
             <option key={character.id} value={character.id}>{character.name}</option>
@@ -338,18 +348,123 @@ function App() {
     </div>
   )
 
+  // Helper to format values
+  const formatValue = (value, key) => {
+    if (value === null || value === undefined) return '-'
+
+    // Special parsing for 3 specific stats
+    if (key === 'weight_class') {
+      const wcMap = { 0: 'Light', 1: 'Medium', 2: 'Heavy' }
+      return wcMap[value] || String(value)
+    }
+    if (key === 'num_tires') {
+      const tiresMap = {
+        0: '4 Tires', 1: '2 Tires (Handle Rel)',
+        2: '2 Tires (Vehicle Rel)', 3: '3 Tires'
+      }
+      return tiresMap[value] || String(value)
+    }
+    if (key === 'drift_type') {
+      const driftMap = { 0: 'Outside (Kart)', 1: 'Outside (Bike)', 2: 'Inside' }
+      return driftMap[value] || String(value)
+    }
+
+    if (Array.isArray(value)) {
+      return '[' + value.map(v => typeof v === 'number' ? v.toFixed(5) : String(v)).join(', ') + ']'
+    }
+    if (typeof value === 'number') {
+      // If it's an integer, show as integer, otherwise 5 significant digits
+      return Number.isInteger(value) ? String(value) : value.toFixed(5)
+    }
+    return String(value)
+  }
+
+  // Helper to extract values for expanded multiplier keys like 'speed_multipliers_0'
+  const getStatValue = (statsObj, key) => {
+    if (!statsObj) return undefined
+    if (!key) return undefined
+    // handle expanded multiplier keys
+    const speedPrefix = 'speed_multipliers_'
+    const rotPrefix = 'rotation_multipliers_'
+    if (key.startsWith(speedPrefix) || key.startsWith(rotPrefix)) {
+      const parts = key.split('_')
+      const idx = parseInt(parts[parts.length - 1], 10)
+      const base = parts.slice(0, parts.length - 1).join('_') // 'speed_multipliers' or 'rotation_multipliers'
+      const arr = statsObj[base]
+      if (Array.isArray(arr) && Number.isInteger(idx) && idx >= 0 && idx < arr.length) {
+        return arr[idx]
+      }
+      return undefined
+    }
+    return statsObj[key]
+  }
+
+  // Toggle section open/closed
+  const toggleSection = (id) => {
+    setOpenSections(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
   const renderAdvancedStats = () => {
-    // Stats list matching the PyQt6 GUI order and display names
-    const stats = [
+    // Multiplier labels for indices 0x00..0x1F
+    const multiplierLabels = [
+      'Road (0x00)', // 0
+      'Slippery Road 1 (0x01)',
+      'Weak Off-road (0x02)',
+      'Off-road (0x03)',
+      'Heavy Off-road (0x04)',
+      'Slippery Road 2 (0x05)',
+      'Boost [DASH] (0x06)',
+      'Boost Ramp [DASHJ] (0x07)',
+      'Jump Pad (0x08)',
+      'Item Road (0x09)',
+      'Solid Fall (0x0A)',
+      'Moving Water (0x0B)',
+      'Wall (0x0C)',
+      'Invisible Wall (0x0D)',
+      'Item Wall (0x0E)',
+      'Wall 2 (0x0F)',
+      'Fall Boundary (0x10)',
+      'Cannon Trigger (0x11)',
+      'Force Recalculation (0x12)',
+      'Half-Pipe Ramp (0x13)',
+      'Player-Only Wall (0x14)',
+      'Moving Road (0x15)',
+      'Sticky Road [ATTACH] (0x16)',
+      'Road 2 (0x17)',
+      'Sound Trigger (0x18)',
+      'Weak Wall (0x19)',
+      'Effect Trigger (0x1A)',
+      'Item State Modifier (0x1B)',
+      'Half-Pipe Invisible Wall (0x1C)',
+      'Rotating Road (0x1D)',
+      'Special Wall (0x1E)',
+      'Invisible Wall 2 (0x1F)',
+    ];
+
+    const classificationItems = [
       { display: "Number of Tires", key: "num_tires" },
       { display: "Drift Type", key: "drift_type" },
       { display: "Weight Class", key: "weight_class" },
-      { display: "Unknown", key: "unknown" },
+    ];
+
+    const coreItems = [
       { display: "Weight", key: "weight" },
       { display: "Bump Deviation", key: "bump_deviation" },
       { display: "Speed", key: "speed" },
       { display: "Speed in Turn", key: "speed_in_turn" },
       { display: "Tilt", key: "tilt" },
+      { display: "Manual Handling", key: "manual_handling" },
+      { display: "Auto Handling", key: "auto_handling" },
+      { display: "Handling Reactivity", key: "handling_reactivity" },
+      { display: "Manual Drift", key: "manual_drift" },
+      { display: "Auto Drift", key: "auto_drift" },
+      { display: "Drift Reactivity", key: "drift_reactivity" },
+      { display: "Outside Drift Angle", key: "outside_drift_angle" },
+      { display: "Outside Drift Decrement", key: "outside_drift_decrement" },
+      { display: "Mini Turbo Duration", key: "mini_turbo_duration" },
+    ];
+
+    const accelItems = [
       { display: "Std Accel A0", key: "std_accel_a0" },
       { display: "Std Accel A1", key: "std_accel_a1" },
       { display: "Std Accel A2", key: "std_accel_a2" },
@@ -360,15 +475,12 @@ function App() {
       { display: "Drift Accel A0", key: "drift_accel_a0" },
       { display: "Drift Accel A1", key: "drift_accel_a1" },
       { display: "Drift Accel T1", key: "drift_accel_t1" },
-      { display: "Manual Handling", key: "manual_handling" },
-      { display: "Auto Handling", key: "auto_handling" },
-      { display: "Handling Reactivity", key: "handling_reactivity" },
-      { display: "Manual Drift", key: "manual_drift" },
-      { display: "Auto Drift", key: "auto_drift" },
-      { display: "Drift Reactivity", key: "drift_reactivity" },
-      { display: "Outside Drift Angle", key: "outside_drift_angle" },
-      { display: "Outside Drift Decrement", key: "outside_drift_decrement" },
-      { display: "Mini Turbo Duration", key: "mini_turbo_duration" },
+    ];
+
+    const speedItems = multiplierLabels.map((label, i) => ({ display: `Speed - ${label}`, key: `speed_multipliers_${i}` }));
+    const rotationItems = multiplierLabels.map((label, i) => ({ display: `Rotation - ${label}`, key: `rotation_multipliers_${i}` }));
+
+    const miscItems = [
       { display: "Rotating Items Z Radius", key: "rotating_items_z_radius" },
       { display: "Rotating Items X Radius", key: "rotating_items_x_radius" },
       { display: "Rotating Items Y Distance", key: "rotating_items_y_distance" },
@@ -378,43 +490,26 @@ function App() {
       { display: "Tire Distance", key: "tire_distance" },
     ];
 
-    // Separator indices (after these indices, add a separator)
-    const separatorAfter = [3, 8, 18, 25, 28, 32];
-
-    const formatValue = (value, key) => {
-      if (value === null || value === undefined) return '-';
-      
-      // Special parsing for 3 specific stats
-      if (key === 'weight_class') {
-        const wcMap = { 0: 'Light', 1: 'Medium', 2: 'Heavy' };
-        return wcMap[value] || String(value);
-      }
-      if (key === 'num_tires') {
-        const tiresMap = {
-          0: '4 Tires', 1: '2 Tires (Handle Rel)',
-          2: '2 Tires (Vehicle Rel)', 3: '3 Tires'
-        };
-        return tiresMap[value] || String(value);
-      }
-      if (key === 'drift_type') {
-        const driftMap = { 0: 'Outside (Kart)', 1: 'Outside (Bike)', 2: 'Inside' };
-        return driftMap[value] || String(value);
-      }
-      
-      if (Array.isArray(value)) {
-        return '[' + value.map(v => typeof v === 'number' ? v.toFixed(5) : String(v)).join(', ') + ']';
-      }
-      if (typeof value === 'number') {
-        // If it's an integer, show as integer, otherwise 5 significant digits
-        return Number.isInteger(value) ? String(value) : value.toFixed(5);
-      }
-      return String(value);
-    };
+    // Order: core first (open by default), then acceleration, speed, rotation,
+    // classification (moved down), and misc last.
+    const sections = [
+      { id: 'core', title: 'Core Stats', items: coreItems },
+      { id: 'acceleration', title: 'Acceleration', items: accelItems },
+      { id: 'speed', title: 'Speed Multipliers', items: speedItems },
+      { id: 'rotation', title: 'Rotation Multipliers', items: rotationItems },
+      { id: 'classification', title: 'Classification', items: classificationItems },
+      { id: 'misc', title: 'Misc', items: miscItems },
+    ];
 
     return (
       <div className="advanced-stats-container">
         <div className="advanced-stats-scroll">
-          <table className="advanced-stats-table">
+          <table className="advanced-stats-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+            <colgroup>
+              <col style={{ width: '33.33%' }} />
+              <col style={{ width: '33.33%' }} />
+              <col style={{ width: '33.33%' }} />
+            </colgroup>
             <thead>
               <tr>
                 <th className="combo1-header">Combo 1</th>
@@ -425,7 +520,7 @@ function App() {
             <tbody>
               <tr>
                 <td>
-                  <select value={selectedVehicle1} onChange={(e) => setSelectedVehicle1(e.target.value)}>
+                  <select className="combo1-select" value={selectedVehicle1} onChange={(e) => setSelectedVehicle1(e.target.value)}>
                     <option value="">Select Vehicle</option>
                     {vehicles.map(vehicle => (
                       <option key={vehicle.id} value={vehicle.id}>{vehicle.name}</option>
@@ -434,7 +529,7 @@ function App() {
                 </td>
                 <td className="center-cell"><strong>Vehicle</strong></td>
                 <td>
-                  <select value={selectedVehicle2} onChange={(e) => setSelectedVehicle2(e.target.value)}>
+                  <select className="combo2-select" value={selectedVehicle2} onChange={(e) => setSelectedVehicle2(e.target.value)}>
                     <option value="">Select Vehicle</option>
                     {vehicles.map(vehicle => (
                       <option key={vehicle.id} value={vehicle.id}>{vehicle.name}</option>
@@ -442,9 +537,10 @@ function App() {
                   </select>
                 </td>
               </tr>
+
               <tr>
                 <td>
-                  <select value={selectedCharacter1} onChange={(e) => setSelectedCharacter1(e.target.value)}>
+                  <select className="combo1-select" value={selectedCharacter1} onChange={(e) => setSelectedCharacter1(e.target.value)}>
                     <option value="">Select Character</option>
                     {characters.map(character => (
                       <option key={character.id} value={character.id}>{character.name}</option>
@@ -453,7 +549,7 @@ function App() {
                 </td>
                 <td className="center-cell"><strong>Character</strong></td>
                 <td>
-                  <select value={selectedCharacter2} onChange={(e) => setSelectedCharacter2(e.target.value)}>
+                  <select className="combo2-select" value={selectedCharacter2} onChange={(e) => setSelectedCharacter2(e.target.value)}>
                     <option value="">Select Character</option>
                     {characters.map(character => (
                       <option key={character.id} value={character.id}>{character.name}</option>
@@ -461,25 +557,31 @@ function App() {
                   </select>
                 </td>
               </tr>
-              {stats.map((stat, index) => (
-                <Fragment key={stat.key}>
-                  <tr>
-                    <td className="value-cell combo1-value">{formatValue(advancedStats1?.[stat.key], stat.key)}</td>
-                    <td className="stat-name-cell">{stat.display}</td>
-                    <td className="value-cell combo2-value">{formatValue(advancedStats2?.[stat.key], stat.key)}</td>
+
+              {sections.map(section => (
+                <Fragment key={section.id}>
+                  <tr className="section-header" onClick={() => toggleSection(section.id)} style={{ cursor: 'pointer' }}>
+                    <td colSpan={3} className="section-title">
+                      <strong>{openSections[section.id] ? '▾' : '▸'} {section.title}</strong>
+                    </td>
                   </tr>
-                  {separatorAfter.includes(index) && (
-                    <tr className="separator-row">
-                      <td colSpan="3"><hr /></td>
+
+                  {openSections[section.id] && section.items.map(stat => (
+                    <tr key={stat.key}>
+                      <td className="value-cell combo1-value">{formatValue(getStatValue(advancedStats1, stat.key), stat.key)}</td>
+                      <td className="stat-name-cell">{stat.display}</td>
+                      <td className="value-cell combo2-value">{formatValue(getStatValue(advancedStats2, stat.key), stat.key)}</td>
                     </tr>
-                  )}
+                  ))}
+
                 </Fragment>
               ))}
+
             </tbody>
           </table>
         </div>
       </div>
-    );
+    )
   }
 
   // Simulation UI has been removed. Show a lightweight placeholder so the tab remains available.

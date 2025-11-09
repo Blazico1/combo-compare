@@ -83,11 +83,15 @@ h1 {
   border-radius: 4px;
 }
 
-.basic-stats-layout .combo1 select {
+.basic-stats-layout .combo1 select,
+.combo1-select,
+.advanced-stats-table .combo1-select {
   border-color: #2244FF;
 }
 
-.basic-stats-layout .combo2 select {
+.basic-stats-layout .combo2 select,
+.combo2-select,
+.advanced-stats-table .combo2-select {
   border-color: #FF2222;
 }
 
@@ -364,8 +368,8 @@ main {
 .advanced-stats-scroll {
   width: 100%;
   max-width: 1200px;
-  max-height: 600px;
-  overflow-y: auto;
+  /* Let the page (document) handle vertical scrolling instead of creating an internal scrollbar */
+  overflow: visible;
   background: #1e1e1e;
   border-radius: 8px;
   padding: 20px;
