@@ -1,0 +1,24 @@
+# Minimal pre-commit config: format and lint Python, lint frontend JS
+repos:
+  - repo: https://github.com/psf/black
+    rev: 24.8b0
+    hooks:
+      - id: black
+
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.1.3
+    hooks:
+      - id: ruff
+        args: ["--select", "ALL"]
+
+  # Local hook to run frontend ESLint. This expects Node deps to be installed
+  # in `frontend/node_modules`. It will attempt to use npx if eslint isn't
+  # available on PATH. Keep this local to avoid forcing npm installs on every
+  # commit in environments where Node isn't present.
+  - repo: local
+    hooks:
+      - id: eslint-frontend
+        name: ESLint (frontend)
+        entry: bash -c "cd frontend && npx eslint src --ext .js,.jsx --fix"
+        language: system
+        types: ["javascript", "jsx"]

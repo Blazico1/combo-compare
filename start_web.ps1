@@ -3,26 +3,63 @@ $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $MyInvocation.MyCommand.Definition
 Write-Host "Starting web app (backend + frontend) from repository: $repo"
 
-function Stop-ProcessIfPidFileExists {
-    param(
-        [string]$PidFilePath
-    )
-    if (Test-Path $PidFilePath) {
-        try {
-            $oldPid = Get-Content $PidFilePath -ErrorAction Stop
-            if ($oldPid) {
-                $oldPid = $oldPid.Trim()
-                $proc = Get-Process -Id $oldPid -ErrorAction SilentlyContinue
-                if ($proc) {
-                    Write-Host "Stopping existing process with PID $oldPid"
-                    try { Stop-Process -Id $oldPid -Force -ErrorAction Stop } catch { Write-Host ("Warning: could not stop PID {0}: {1}" -f $oldPid, $_) }
-                }
-            }
-        } catch {
-            Write-Host ("Warning reading/stopping PID file {0}: {1}" -f $PidFilePath, $_)
-        }
-        Remove-Item $PidFilePath -ErrorAction SilentlyContinue
+# Function to check if a process is running by PID
+function Test-ProcessRunning {
+    param([int]$Pid)
+    try {
+        $proc = Get-Process -Id $Pid -ErrorAction Stop
+        return $true
+    } catch {
+        return $false
     }
+}
+
+# Function to find running processes related to this repo
+function Find-RepoProcesses {
+    param([string]$RepoPath)
+    $processes = Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and $_.CommandLine.Contains($RepoPath) } | Select-Object ProcessId, Name, CommandLine
+    return $processes
+}
+
+# Check if already running
+$backendPidFile = Join-Path $repo "backend.pid"
+$frontendPidFile = Join-Path $repo "frontend.pid"
+
+$alreadyRunning = $false
+if ((Test-Path $backendPidFile) -or (Test-Path $frontendPidFile)) {
+    Write-Host "PID files exist. Checking if processes are still running..."
+    if (Test-Path $backendPidFile) {
+        $pid = [int](Get-Content $backendPidFile -ErrorAction SilentlyContinue)
+        if (Test-ProcessRunning $pid) {
+            Write-Host "Backend appears to be running (PID $pid). Please stop it first."
+            $alreadyRunning = $true
+        } else {
+            Remove-Item $backendPidFile -ErrorAction SilentlyContinue
+        }
+    }
+    if (Test-Path $frontendPidFile) {
+        $pid = [int](Get-Content $frontendPidFile -ErrorAction SilentlyContinue)
+        if (Test-ProcessRunning $pid) {
+            Write-Host "Frontend appears to be running (PID $pid). Please stop it first."
+            $alreadyRunning = $true
+        } else {
+            Remove-Item $frontendPidFile -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+# Also check for any repo-related processes
+$repoProcesses = Find-RepoProcesses $repo
+if ($repoProcesses) {
+    Write-Host "Found existing processes related to this repo:"
+    $repoProcesses | ForEach-Object { Write-Host "  $($_.Name) (PID $($_.ProcessId)): $($_.CommandLine)" }
+    Write-Host "Please stop them manually or use the stop script."
+    $alreadyRunning = $true
+}
+
+if ($alreadyRunning) {
+    Write-Host "Aborting start due to existing processes."
+    exit 1
 }
 
 # Paths
@@ -32,12 +69,10 @@ $backendPip = Join-Path $backendVenv "Scripts\pip.exe"
 $backendMain = Join-Path $repo "backend\main.py"
 $backendOut = Join-Path $repo "backend\backend.log"
 $backendErr = Join-Path $repo "backend\backend.err.log"
-$backendPidFile = Join-Path $repo "backend.pid"
 
 $frontendDir = Join-Path $repo "frontend"
 $frontendOut = Join-Path $frontendDir "frontend.log"
 $frontendErr = Join-Path $frontendDir "frontend.err.log"
-$frontendPidFile = Join-Path $repo "frontend.pid"
 
 Write-Host "Preparing backend..."
 
@@ -67,13 +102,12 @@ if ($reqToUse) {
     Write-Host "No requirements.txt found; skipping pip install"
 }
 
-# Stop any previously started backend/frontend using pid files
-Stop-ProcessIfPidFileExists -PidFilePath $backendPidFile
-Stop-ProcessIfPidFileExists -PidFilePath $frontendPidFile
-
-Write-Host "Starting backend using: $backendPython"
+Write-Host "Starting backend using venv Python: $backendPython"
 try {
-    $be = Start-Process -FilePath $backendPython -ArgumentList "`"$backendMain`"" -WorkingDirectory (Join-Path $repo "backend") -RedirectStandardOutput $backendOut -RedirectStandardError $backendErr -WindowStyle Hidden -PassThru
+    # Run uvicorn inside the backend venv via python -m uvicorn so the environment is used.
+    # Use module `main:app` since the working directory is the backend folder.
+    $uvicornArgs = "-m uvicorn main:app --reload --port 8000"
+    $be = Start-Process -FilePath $backendPython -ArgumentList $uvicornArgs -WorkingDirectory (Join-Path $repo "backend") -RedirectStandardOutput $backendOut -RedirectStandardError $backendErr -WindowStyle Hidden -PassThru
     if ($be) {
         $be.Id | Out-File -FilePath $backendPidFile -Encoding ascii
         Write-Host "Backend started (PID $($be.Id)). Logs: $backendOut, $backendErr"

@@ -9,21 +9,43 @@ from typing import Dict, Any, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import uvicorn
+import logging
 
 from logic import stats, simulation
 
 app = FastAPI(title="Combo Compare API", version="1.0.0")
 
-# Allow local frontend origins
+# Configure a simple module logger
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s: %(message)s')
+logger = logging.getLogger(__name__)
+
+# Configure CORS origins from environment (comma-separated) with sensible defaults for local dev
+allowed = os.environ.get('ALLOWED_ORIGINS')
+if allowed:
+    allow_list = [o.strip() for o in allowed.split(',') if o.strip()]
+else:
+    allow_list = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000",
-                   "http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=allow_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# If a built frontend exists under ../frontend/dist, serve it as static files
+repo_root = os.path.dirname(os.path.dirname(__file__))
+frontend_dist = os.path.join(repo_root, 'frontend', 'dist')
+if os.path.isdir(frontend_dist):
+    app.mount('/', StaticFiles(directory=frontend_dist, html=True), name='frontend')
 
 
 class StatsManager:
@@ -36,23 +58,27 @@ class StatsManager:
 
     def _load(self) -> None:
         try:
+            backend_dir = os.path.dirname(__file__)
+            kart_path = os.path.join(backend_dir, 'kartParam.bin')
+            driver_path = os.path.join(backend_dir, 'driverParam.bin')
+
             # Vanilla files must exist
-            if not (os.path.exists('kartParam.bin') and os.path.exists('driverParam.bin')):
-                print('Vanilla stats files not found in backend directory')
+            if not (os.path.exists(kart_path) and os.path.exists(driver_path)):
+                logger.warning('Vanilla stats files not found in backend directory')
                 self.vanilla = None
                 self.limitless = None
                 return
 
-            vehicles = stats.parse_stats('kartParam.bin')
+            vehicles = stats.parse_stats(kart_path)
             stats.set_names(vehicles, False)
-            characters = stats.parse_stats('driverParam.bin')
+            characters = stats.parse_stats(driver_path)
             stats.set_names(characters, True)
 
             self.vanilla = {'vehicles': vehicles, 'characters': characters}
 
             # Try loading limitless; fall back to vanilla when missing
-            limitless_kart = 'limitless_kartParam.bin'
-            limitless_driver = 'limitless_driverParam.bin'
+            limitless_kart = os.path.join(backend_dir, 'limitless_kartParam.bin')
+            limitless_driver = os.path.join(backend_dir, 'limitless_driverParam.bin')
             if os.path.exists(limitless_kart) and os.path.exists(limitless_driver):
                 lv = stats.parse_stats(limitless_kart)
                 stats.set_names(lv, False)
@@ -62,9 +88,9 @@ class StatsManager:
             else:
                 self.limitless = self.vanilla
 
-            print(f"Stats loaded: vanilla={self.vanilla is not None} limitless={self.limitless is not None}")
+            logger.info("Stats loaded: vanilla=%s limitless=%s", self.vanilla is not None, self.limitless is not None)
         except Exception as e:
-            print('Error loading stats:', e)
+            logger.exception('Error loading stats: %s', e)
             self.vanilla = None
             self.limitless = None
 
@@ -215,33 +241,75 @@ def api_simulate(data: Dict[str, Any]):
     if not stats_data:
         raise HTTPException(status_code=500, detail='Stats not loaded')
     try:
-        combo1 = data.get('combo1', {})
-        combo2 = data.get('combo2', {})
+        combo1 = data.get('combo1', None)
+        combo2 = data.get('combo2', None)
         sim_type = data.get('sim_type', 'accel')
         time = data.get('time', 10.0)
-        wheelie1 = combo1.get('wheelie', False)
-        wheelie2 = combo2.get('wheelie', False)
-        ssmt1 = combo1.get('ssmt', False)
-        ssmt2 = combo2.get('ssmt', False)
 
+        # Accept simulation with either combo1 or combo2 (or both). If the caller
+        # only provided combo2, treat it as combo1 for the purposes of single-run.
+        if not combo1 and combo2:
+            combo1 = combo2
+            combo2 = None
+
+        if not combo1:
+            raise HTTPException(status_code=400, detail='No combo provided')
+
+        wheelie1 = bool(combo1.get('wheelie', False))
+        ssmt1 = bool(combo1.get('ssmt', False))
+        smt1 = bool(combo1.get('smt', False))
+
+        # Look up combo1
         vehicle1 = next(v for v in stats_data['vehicles'] if v.id == combo1.get('vehicle_id'))
         character1 = next(c for c in stats_data['characters'] if c.id == combo1.get('character_id'))
-        vehicle2 = next(v for v in stats_data['vehicles'] if v.id == combo2.get('vehicle_id'))
-        character2 = next(c for c in stats_data['characters'] if c.id == combo2.get('character_id'))
 
+        # Determine if combo2 provided and valid
+        result2 = None
+        vehicle2 = character2 = None
+        if combo2 and combo2.get('vehicle_id') is not None and combo2.get('character_id') is not None:
+            wheelie2 = bool(combo2.get('wheelie', False))
+            ssmt2 = bool(combo2.get('ssmt', False))
+            smt2 = bool(combo2.get('smt', False))
+            vehicle2 = next(v for v in stats_data['vehicles'] if v.id == combo2.get('vehicle_id'))
+            character2 = next(c for c in stats_data['characters'] if c.id == combo2.get('character_id'))
+
+        # Run simulations
         if sim_type == 'accel':
             result1 = simulation.simulate_accel(vehicle1.get_basic_stats(), character1.get_basic_stats(), wheelie=wheelie1, ssmt=ssmt1, time=time)
-            result2 = simulation.simulate_accel(vehicle2.get_basic_stats(), character2.get_basic_stats(), wheelie=wheelie2, ssmt=ssmt2, time=time)
+            if vehicle2 is not None:
+                result2 = simulation.simulate_accel(vehicle2.get_basic_stats(), character2.get_basic_stats(), wheelie=wheelie2, ssmt=ssmt2, time=time)
         else:
-            result1 = simulation.simulate_mini_turbo(vehicle1.get_basic_stats(), character1.get_basic_stats(), wheelie=wheelie1, SMT=ssmt1, time=time)
-            result2 = simulation.simulate_mini_turbo(vehicle2.get_basic_stats(), character2.get_basic_stats(), wheelie=wheelie2, SMT=ssmt2, time=time)
+            # For mini-turbo simulation the SMT flag (short mini-turbo) comes from the 'smt' payload
+            result1 = simulation.simulate_mini_turbo(vehicle1.get_basic_stats(), character1.get_basic_stats(), wheelie=wheelie1, SMT=smt1, time=time)
+            if vehicle2 is not None:
+                result2 = simulation.simulate_mini_turbo(vehicle2.get_basic_stats(), character2.get_basic_stats(), wheelie=wheelie2, SMT=smt2, time=time)
 
-        return {
-            'combo1': {'times': result1[0].tolist(), 'speeds': result1[1].tolist(), 'distances': result1[2].tolist()},
-            'combo2': {'times': result2[0].tolist(), 'speeds': result2[1].tolist(), 'distances': result2[2].tolist()},
+        # Convert distances from internal units (units per frame) to metres.
+        # The simulation produces distances in 'units' (u) per frame.
+        # By convention 216 u == 1 m, so divide by 216 to get metres.
+        d1_m = (result1[2] / 216.0) if result1[2] is not None else result1[2]
+        out = {
+            'combo1': {
+                'times': result1[0].tolist(),
+                'speeds': result1[1].tolist(),
+                'distances': d1_m.tolist(),
+            }
         }
+        if result2 is not None:
+            _d2 = result2[2]
+            d2_m = (_d2 / 216.0) if _d2 is not None else _d2
+            out['combo2'] = {
+                'times': result2[0].tolist(),
+                'speeds': result2[1].tolist(),
+                'distances': d2_m.tolist(),
+            }
+        else:
+            out['combo2'] = None
+
+        return out
     except StopIteration:
-        raise HTTPException(status_code=404, detail='Vehicle or character not found')
+        detail_msg = 'Vehicle or character not found'
+        raise HTTPException(status_code=404, detail=detail_msg)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -251,7 +319,12 @@ def api_health():
     mgr = get_stats_manager()
     vanilla_loaded = mgr.vanilla is not None
     limitless_loaded = mgr.limitless is not None
-    return {'status': 'healthy' if (vanilla_loaded or limitless_loaded) else 'unhealthy', 'vanilla_loaded': vanilla_loaded, 'limitless_loaded': limitless_loaded}
+    status = 'healthy' if (vanilla_loaded or limitless_loaded) else 'unhealthy'
+    return {
+        'status': status,
+        'vanilla_loaded': vanilla_loaded,
+        'limitless_loaded': limitless_loaded,
+    }
 
 
 if __name__ == '__main__':
