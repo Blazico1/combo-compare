@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from 'react'
+import { useState, useEffect, Fragment, useMemo } from 'react'
 import './App.css'
 import {
   Chart as ChartJS,
@@ -10,6 +10,7 @@ import {
   Legend,
 } from 'chart.js'
 import { Radar } from 'react-chartjs-2'
+import TimePlot from './TimePlot'
 
 ChartJS.register(
   RadialLinearScale,
@@ -20,8 +21,33 @@ ChartJS.register(
   Legend
 )
 
+// Inline SVG icon components so colour can follow CSS variables (currentColor)
+function SunIcon({ className, style }) {
+  return (
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M12 2V4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M12 20V22" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M4 12L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M22 12L20 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M19.7778 4.22266L17.5558 6.25424" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M4.22217 4.22266L6.44418 6.25424" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M6.44434 17.5557L4.22211 19.7779" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M19.7778 19.7773L17.5558 17.5551" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function MoonIcon({ className, style }) {
+  return (
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path fillRule="evenodd" clipRule="evenodd" d="M11.0174 2.80157C6.37072 3.29221 2.75 7.22328 2.75 12C2.75 17.1086 6.89137 21.25 12 21.25C16.7767 21.25 20.7078 17.6293 21.1984 12.9826C19.8717 14.6669 17.8126 15.75 15.5 15.75C11.4959 15.75 8.25 12.5041 8.25 8.5C8.25 6.18738 9.33315 4.1283 11.0174 2.80157ZM1.25 12C1.25 6.06294 6.06294 1.25 12 1.25C12.7166 1.25 13.0754 1.82126 13.1368 2.27627C13.196 2.71398 13.0342 3.27065 12.531 3.57467C10.8627 4.5828 9.75 6.41182 9.75 8.5C9.75 11.6756 12.3244 14.25 15.5 14.25C17.5882 14.25 19.4172 13.1373 20.4253 11.469C20.7293 10.9658 21.286 10.804 21.7237 10.8632C22.1787 10.9246 22.75 11.2834 22.75 12C22.75 17.9371 17.9371 22.75 12 22.75C6.06294 22.75 1.25 17.9371 1.25 12Z" fill="currentColor" />
+    </svg>
+  )
+}
+
 function App() {
-  console.log('App component rendering')
+  // App render (debug logging removed)
   const [activeTab, setActiveTab] = useState('basic')
   const [statsMode, setStatsMode] = useState('vanilla')
   const [activeMode, setActiveMode] = useState('compare')
@@ -44,10 +70,53 @@ function App() {
   const [smt2, setSmt2] = useState(false)
   const [ssmt1, setSsmt1] = useState(false)
   const [ssmt2, setSsmt2] = useState(false)
-  const [hide1, setHide1] = useState(false)
-  const [hide2, setHide2] = useState(false)
   const [simulationResult, setSimulationResult] = useState(null)
   const [loading, setLoading] = useState(false)
+  // Theme state for Light/Dark mode
+  const [theme, setTheme] = useState('dark')
+
+  const toggleTheme = () => {
+    // Update the document attribute synchronously so CSS variables on :root
+    // are switched before the next render. This prevents a render-time race
+    // where getCssVar() reads the old variables while the component is
+    // rendering (which caused Chart.js to receive stale/incorrect colours).
+    const newTheme = theme === 'dark' ? 'light' : 'dark'
+    try {
+      document.documentElement.setAttribute('data-theme', newTheme)
+    } catch (e) {
+      // ignore if not available
+    }
+    setTheme(newTheme)
+  }
+
+  // (We set the documentElement data-theme synchronously in toggleTheme to
+  // avoid timing races where render reads CSS variables before the attribute
+  // is updated.)
+
+  // NOTE: we intentionally don't write inline styles to `body` here.
+  // Theme is applied by toggling `document.documentElement.dataset.theme` above
+  // and by using CSS variables. The UI will animate if `body` has a
+  // `transition` defined for `background-color`/`color` in CSS (see `index.css`).
+
+  // Read CSS variables (if available) so chart dataset colours follow the theme variables.
+  const getCssVar = (name) => {
+    try {
+      // Read from :root (documentElement) where variables are centralized
+      const el = document.documentElement
+      const val = getComputedStyle(el).getPropertyValue(name)
+      return val ? val.trim() : ''
+    } catch (e) {
+      return ''
+    }
+  }
+
+  // Chart colours are read directly from CSS theme variables. No fallbacks
+  // are used here — the theme variables are the single source of truth.
+  const chartTextColor = getCssVar('--chart-text')
+  const chartGridColor = getCssVar('--grid')
+
+  const combo1BorderColor = getCssVar('--accent-2')
+  const combo2BorderColor = getCssVar('--accent-3')
 
   // Collapsible sections state: default all closed except core
   const [openSections, setOpenSections] = useState({
@@ -93,7 +162,7 @@ function App() {
       const data = await response.json()
       setVehicles(data.vehicles)
     } catch (error) {
-      console.error('Error loading vehicles:', error)
+      // error logging removed
     }
   }
 
@@ -103,7 +172,7 @@ function App() {
       const data = await response.json()
       setCharacters(data.characters)
     } catch (error) {
-      console.error('Error loading characters:', error)
+      // error logging removed
     }
   }
 
@@ -149,7 +218,7 @@ function App() {
         setBasicStats2(statsObj)
       }
     } catch (error) {
-      console.error('Error loading basic stats:', error)
+      // error logging removed
     }
   }
 
@@ -178,13 +247,16 @@ function App() {
         setAdvancedStats2(statsObj)
       }
     } catch (error) {
-      console.error('Error loading advanced stats:', error)
+      // error logging removed
     }
   }
 
   const runSimulation = async () => {
-    if (!selectedVehicle1 || !selectedCharacter1 || !selectedVehicle2 || !selectedCharacter2) {
-      alert('Please select both combos')
+    // Require at least one fully-selected combo (vehicle + character)
+    const combo1Ready = selectedVehicle1 && selectedCharacter1
+    const combo2Ready = selectedVehicle2 && selectedCharacter2
+    if (!combo1Ready && !combo2Ready) {
+      // nothing to simulate
       return
     }
 
@@ -197,26 +269,51 @@ function App() {
       }
 
       const payload = {
-        combo1: {
+        sim_type: simTypeMap[simulationType] || 'accel',
+        differential: differentialMode,
+        time: simulationTime,
+        mode: statsMode, // ensure backend looks up vehicles/characters in the correct stats mode
+      }
+
+      if (combo1Ready) {
+        payload.combo1 = {
           vehicle_id: parseInt(selectedVehicle1, 10),
           character_id: parseInt(selectedCharacter1, 10),
           wheelie: wheelie1,
           ssmt: ssmt1,
           smt: smt1,
-          hide: hide1
-        },
-        combo2: {
+        }
+      }
+
+      if (combo2Ready) {
+        payload.combo2 = {
           vehicle_id: parseInt(selectedVehicle2, 10),
           character_id: parseInt(selectedCharacter2, 10),
           wheelie: wheelie2,
           ssmt: ssmt2,
           smt: smt2,
-          hide: hide2
-        },
-        sim_type: simTypeMap[simulationType] || 'accel',
-        differential: differentialMode,
-        time: simulationTime
+        }
       }
+
+      // Client-side validation: ensure provided ids exist in the loaded lists for the selected mode
+      const findVehicle = (id) => vehicles.find(v => String(v.id) === String(id))
+      const findCharacter = (id) => characters.find(c => String(c.id) === String(id))
+      if (payload.combo1) {
+        if (!findVehicle(payload.combo1.vehicle_id) || !findCharacter(payload.combo1.character_id)) {
+          alert('Combo 1 vehicle or character not found for current stats mode. Check your selections or switch mode to Vanilla/Limitless.')
+          setLoading(false)
+          return
+        }
+      }
+      if (payload.combo2) {
+        if (!findVehicle(payload.combo2.vehicle_id) || !findCharacter(payload.combo2.character_id)) {
+          alert('Combo 2 vehicle or character not found for current stats mode. Check your selections or switch mode to Vanilla/Limitless.')
+          setLoading(false)
+          return
+        }
+      }
+
+  // debug: simulate payload logged during development (disabled)
 
       const response = await fetch('/api/simulate', {
         method: 'POST',
@@ -232,89 +329,137 @@ function App() {
       const data = await response.json()
       setSimulationResult(data)
     } catch (error) {
-      console.error('Error running simulation:', error)
-      alert('Simulation error: ' + (error.message || error))
+        alert('Simulation error: ' + (error.message || error))
     } finally {
       setLoading(false)
     }
   }
 
+  // Auto-run simulation when either combo selection changes (user requested)
+  useEffect(() => {
+    const combo1Ready = selectedVehicle1 && selectedCharacter1
+    const combo2Ready = selectedVehicle2 && selectedCharacter2
+    if (combo1Ready || combo2Ready) {
+      // Debounce briefly to avoid rapid duplicate calls when user changes multiple selects
+      const id = setTimeout(() => runSimulation(), 120)
+      return () => clearTimeout(id)
+    }
+    // if neither combo is ready, clear previous result
+    setSimulationResult(null)
+  }, [
+    selectedVehicle1,
+    selectedCharacter1,
+    selectedVehicle2,
+    selectedCharacter2,
+    simulationType,
+    differentialMode,
+    simulationTime,
+    wheelie1,
+    wheelie2,
+    smt1,
+    smt2,
+    ssmt1,
+    ssmt2,
+    statsMode,
+  ])
+
+  // Keep UI checkbox state consistent with selection and simulation type.
+  // Clearing disabled options must happen inside an effect (not during render).
+  useEffect(() => {
+    const combo1Ready = selectedVehicle1 && selectedCharacter1
+    const combo2Ready = selectedVehicle2 && selectedCharacter2
+    const smtEnabled = simulationType === 'mini-turbo'
+    const ssmtEnabled = simulationType === 'acceleration'
+
+    if (!combo1Ready) {
+      if (wheelie1) setWheelie1(false)
+      if (smt1) setSmt1(false)
+      if (ssmt1) setSsmt1(false)
+    } else {
+      if (!smtEnabled && smt1) setSmt1(false)
+      if (!ssmtEnabled && ssmt1) setSsmt1(false)
+    }
+
+    if (!combo2Ready) {
+      if (wheelie2) setWheelie2(false)
+      if (smt2) setSmt2(false)
+      if (ssmt2) setSsmt2(false)
+    } else {
+      if (!smtEnabled && smt2) setSmt2(false)
+      if (!ssmtEnabled && ssmt2) setSsmt2(false)
+    }
+  }, [
+    selectedVehicle1,
+    selectedCharacter1,
+    selectedVehicle2,
+    selectedCharacter2,
+    simulationType,
+    differentialMode,
+  ])
+
   const getRadarData = () => {
     const labels = ['Speed', 'Weight', 'Acceleration', 'Handling', 'Drift', 'Offroad', 'Mini Turbo']
     const keys = ['speed', 'weight', 'acceleration', 'handling', 'drift', 'offroad', 'mini_turbo']
     const datasets = []
-    if (basicStats1) {
-      const data1 = keys.map(key => basicStats1[key] || 0)
-      datasets.push({
-        label: 'Combo 1',
-        data: data1,
-        backgroundColor: 'rgba(34, 68, 255, 0.25)',
-        borderColor: '#2244FF',
-        borderWidth: 2,
-        pointRadius: 0, // No markers
-      })
-    }
-    if (basicStats2) {
-      const data2 = keys.map(key => basicStats2[key] || 0)
-      datasets.push({
-        label: 'Combo 2',
-        data: data2,
-        backgroundColor: 'rgba(255, 34, 34, 0.25)',
-        borderColor: '#FF2222',
-        borderWidth: 2,
-        pointRadius: 0, // No markers
-      })
-    }
+    // Always include Combo 1 dataset
+    const data1 = basicStats1 ? keys.map(key => basicStats1[key] || 0) : [0, 0, 0, 0, 0, 0, 0]
+    datasets.push({
+      label: 'Combo 1',
+      data: data1,
+      backgroundColor: getCssVar('--combo1-bg'),
+      borderColor: combo1BorderColor,
+      borderWidth: 2,
+      pointRadius: 0, // No markers
+    })
+    // Always include Combo 2 dataset
+    const data2 = basicStats2 ? keys.map(key => basicStats2[key] || 0) : [0, 0, 0, 0, 0, 0, 0]
+    datasets.push({
+      label: 'Combo 2',
+      data: data2,
+      backgroundColor: getCssVar('--combo2-bg'),
+      borderColor: combo2BorderColor,
+      borderWidth: 2,
+      pointRadius: 0, // No markers
+    })
     return {
       labels,
       datasets,
     }
   }
 
+  const radarData = useMemo(() => getRadarData(), [basicStats1, basicStats2, theme])
+
   const renderBasicStats = () => (
     <div className="basic-stats-layout">
-      <div className="combo-column combo1">
-        <h3>Combo 1</h3>
-  <select className="combo1-select" value={selectedVehicle1} onChange={(e) => setSelectedVehicle1(e.target.value)}>
-          <option value="">Select Vehicle</option>
-          {vehicles.map(vehicle => (
-            <option key={vehicle.id} value={vehicle.id}>{vehicle.name}</option>
-          ))}
-        </select>
-  <select className="combo1-select" value={selectedCharacter1} onChange={(e) => setSelectedCharacter1(e.target.value)}>
-          <option value="">Select Character</option>
-          {characters.map(character => (
-            <option key={character.id} value={character.id}>{character.name}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="chart-column">
+      <div className="chart-column" style={{ width: '100%', padding: 0 }}>
         <div className="radar-container">
           <div className="radar-chart">
-            <Radar data={getRadarData()} width={600} height={600} options={{
-              responsive: false,
-              scales: {
-                r: {
-                  beginAtZero: true,
-                  max: 1,
-                  ticks: {
-                    display: false, // Hide numbers like original
-                  },
-                  grid: {
-                    color: '#888888',
-                  },
-                  angleLines: {
-                    color: '#888888',
-                  },
-                  pointLabels: {
-                    color: '#ffffff',
-                    font: {
-                      size: 12,
+            <Radar key={theme} data={radarData} options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              layout: { padding: { left: 40, right: 40, top: 20, bottom: 20 } },
+                scales: {
+                  r: {
+                    // Use a slightly expanded range so the chart doesn't start at the exact 0 line
+                    min: -0.1,
+                    max: 1.1,
+                    ticks: {
+                      display: false, // Hide numbers like original
+                    },
+                    grid: {
+                      color: chartGridColor,
+                    },
+                    angleLines: {
+                      color: chartGridColor,
+                    },
+                    pointLabels: {
+                      color: chartTextColor,
+                      font: {
+                        size: 12,
+                      },
                     },
                   },
                 },
-              },
               plugins: {
                 legend: {
                   display: false, // Remove legend
@@ -328,22 +473,6 @@ function App() {
             }} />
           </div>
         </div>
-      </div>
-
-      <div className="combo-column combo2">
-        <h3>Combo 2</h3>
-  <select className="combo2-select" value={selectedVehicle2} onChange={(e) => setSelectedVehicle2(e.target.value)}>
-          <option value="">Select Vehicle</option>
-          {vehicles.map(vehicle => (
-            <option key={vehicle.id} value={vehicle.id}>{vehicle.name}</option>
-          ))}
-        </select>
-  <select className="combo2-select" value={selectedCharacter2} onChange={(e) => setSelectedCharacter2(e.target.value)}>
-          <option value="">Select Character</option>
-          {characters.map(character => (
-            <option key={character.id} value={character.id}>{character.name}</option>
-          ))}
-        </select>
       </div>
     </div>
   )
@@ -369,12 +498,24 @@ function App() {
       return driftMap[value] || String(value)
     }
 
+    const formatNumber = (n) => {
+      if (n === null || n === undefined) return '-'
+      if (Number.isInteger(n)) return String(n)
+      // Use toPrecision to get up to 5 significant digits, then strip
+      // trailing zeros after the decimal point for a cleaner display.
+      const p = Number(n).toPrecision(5)
+      if (p.includes('e') || p.includes('E')) return p
+      // Remove trailing zeros but keep at least one digit after decimal when needed
+      let s = p.replace(/(\.\d*?[1-9])0+$/, '$1')
+      s = s.replace(/\.0+$/, '')
+      return s
+    }
+
     if (Array.isArray(value)) {
-      return '[' + value.map(v => typeof v === 'number' ? v.toFixed(5) : String(v)).join(', ') + ']'
+      return '[' + value.map(v => typeof v === 'number' ? formatNumber(v) : String(v)).join(', ') + ']'
     }
     if (typeof value === 'number') {
-      // If it's an integer, show as integer, otherwise 5 significant digits
-      return Number.isInteger(value) ? String(value) : value.toFixed(5)
+      return formatNumber(value)
     }
     return String(value)
   }
@@ -397,6 +538,42 @@ function App() {
       return undefined
     }
     return statsObj[key]
+  }
+
+  // Render simulation sidebar stats similar to the original PyQt UI.
+  const renderSimSidebarStats = (adv, basic) => {
+    if (!adv && !basic) return null
+
+    if (simulationType === 'acceleration') {
+      const speedVal = adv?.speed ?? basic?.speed
+      const As = adv ? [adv.std_accel_a0, adv.std_accel_a1, adv.std_accel_a2, adv.std_accel_a3] : (basic?.As || [])
+      const Ts = adv ? [adv.std_accel_t1, adv.std_accel_t2, adv.std_accel_t3] : (basic?.Ts || [])
+
+      return (
+        <div>
+          <div className="sim-stat-line">Speed: {formatValue(speedVal)}</div>
+          {/* Each A value on its own row to match PyQt layout */}
+          <div className="sim-stat-line">A0: {formatValue(As[0])}</div>
+          <div className="sim-stat-line">A1: {formatValue(As[1])}</div>
+          <div className="sim-stat-line">A2: {formatValue(As[2])}</div>
+          <div className="sim-stat-line">A3: {formatValue(As[3])}</div>
+          {/* Each T value on its own row */}
+          <div className="sim-stat-line">T1: {formatValue(Ts[0])}</div>
+          <div className="sim-stat-line">T2: {formatValue(Ts[1])}</div>
+          <div className="sim-stat-line">T3: {formatValue(Ts[2])}</div>
+        </div>
+      )
+    }
+
+    // Mini-turbo: show speed and mini-turbo duration as integer frames
+    const speedVal = adv?.speed ?? basic?.speed
+    const mt = adv?.mini_turbo_duration ?? basic?.mini_turbo
+    return (
+      <div>
+        <div className="sim-stat-line">Speed: {formatValue(speedVal)}</div>
+        <div className="sim-stat-line">Mini Turbo: {mt != null ? String(Math.round(mt)) : '-'}</div>
+      </div>
+    )
   }
 
   // Toggle section open/closed
@@ -518,45 +695,8 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>
-                  <select className="combo1-select" value={selectedVehicle1} onChange={(e) => setSelectedVehicle1(e.target.value)}>
-                    <option value="">Select Vehicle</option>
-                    {vehicles.map(vehicle => (
-                      <option key={vehicle.id} value={vehicle.id}>{vehicle.name}</option>
-                    ))}
-                  </select>
-                </td>
-                <td className="center-cell"><strong>Vehicle</strong></td>
-                <td>
-                  <select className="combo2-select" value={selectedVehicle2} onChange={(e) => setSelectedVehicle2(e.target.value)}>
-                    <option value="">Select Vehicle</option>
-                    {vehicles.map(vehicle => (
-                      <option key={vehicle.id} value={vehicle.id}>{vehicle.name}</option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
-
-              <tr>
-                <td>
-                  <select className="combo1-select" value={selectedCharacter1} onChange={(e) => setSelectedCharacter1(e.target.value)}>
-                    <option value="">Select Character</option>
-                    {characters.map(character => (
-                      <option key={character.id} value={character.id}>{character.name}</option>
-                    ))}
-                  </select>
-                </td>
-                <td className="center-cell"><strong>Character</strong></td>
-                <td>
-                  <select className="combo2-select" value={selectedCharacter2} onChange={(e) => setSelectedCharacter2(e.target.value)}>
-                    <option value="">Select Character</option>
-                    {characters.map(character => (
-                      <option key={character.id} value={character.id}>{character.name}</option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
+              {/* Vehicle and Character header rows intentionally removed from advanced stats table
+                  — selections are already shown in the header controls. */}
 
               {sections.map(section => (
                 <Fragment key={section.id}>
@@ -584,32 +724,166 @@ function App() {
     )
   }
 
-  // Simulation UI has been removed. Show a lightweight placeholder so the tab remains available.
   const renderSimulation = () => (
-    <div className="simulation-placeholder">
-      <h2>Simulation — Placeholder</h2>
-      <p>The simulation feature has been temporarily disabled and removed from this build.</p>
-      <p>If you need it restored, open an issue or re-enable the simulation tab in development.</p>
+    <div className="simulation-grid">
+      {/* determine if each combo has both vehicle+character selected */}
+      {null}
+      <div className="sim-panel combo1-panel">
+        <h4>Combo 1</h4>
+        <div className="sim-panel-controls">
+          {(() => {
+            const combo1Ready = selectedVehicle1 && selectedCharacter1
+            const smtEnabled = simulationType === 'mini-turbo'
+            const ssmtEnabled = simulationType === 'acceleration'
+
+            return (
+              <>
+                <label className={combo1Ready ? '' : 'disabled-option'}>
+                  <input type="checkbox" disabled={!combo1Ready} checked={wheelie1} onChange={(e) => setWheelie1(e.target.checked)} /> Wheelie
+                </label>
+                <label className={combo1Ready && smtEnabled ? '' : 'disabled-option'}>
+                  <input type="checkbox" disabled={!(combo1Ready && smtEnabled)} checked={smt1} onChange={(e) => setSmt1(e.target.checked)} /> SMT
+                </label>
+                <label className={combo1Ready && ssmtEnabled ? '' : 'disabled-option'}>
+                  <input type="checkbox" disabled={!(combo1Ready && ssmtEnabled)} checked={ssmt1} onChange={(e) => setSsmt1(e.target.checked)} /> SSMT
+                </label>
+              </>
+            )
+          })()}
+        </div>
+        <div className="sim-panel-stats">
+          {(() => {
+            // Prefer advanced stats for detailed fields (As/Ts/std accel and mini_turbo_duration)
+            const adv = advancedStats1
+            const basic = basicStats1
+            if (!adv && !basic) return null
+
+            return renderSimSidebarStats(adv, basic)
+          })()}
+        </div>
+      </div>
+
+      <div className="sim-middle">
+        <div className="simulation-controls-row">
+          <div>
+            <label style={{ marginRight: 8 }}>Simulation Type:</label>
+            <select className="sim-type-select" value={simulationType} onChange={(e) => setSimulationType(e.target.value)}>
+              <option value="acceleration">Acceleration</option>
+              <option value="mini-turbo">Mini-turbo</option>
+            </select>
+            <label style={{ marginLeft: 12 }} className={selectedVehicle1 && selectedCharacter1 && selectedVehicle2 && selectedCharacter2 ? '' : 'disabled-option'}>
+              <input type="checkbox" disabled={!(selectedVehicle1 && selectedCharacter1 && selectedVehicle2 && selectedCharacter2)} checked={differentialMode} onChange={(e) => setDifferentialMode(e.target.checked)} /> Differential Mode
+            </label>
+          </div>
+        </div>
+
+        <div className="simulation-plot">
+          <TimePlot simulationResult={simulationResult} differential={differentialMode} />
+        </div>
+
+        <div style={{ marginTop: 'auto' }}>
+          <label style={{ marginRight: 8 }}>Simulation Time: {simulationTime}s</label>
+          <input type="range" min={3} max={20} value={simulationTime} onChange={(e) => setSimulationTime(parseInt(e.target.value, 10))} />
+        </div>
+      </div>
+
+      <div className="sim-panel combo2-panel">
+        <h4>Combo 2</h4>
+        <div className="sim-panel-controls">
+          {(() => {
+            const combo2Ready = selectedVehicle2 && selectedCharacter2
+            const smtEnabled = simulationType === 'mini-turbo'
+            const ssmtEnabled = simulationType === 'acceleration'
+
+            return (
+              <>
+                <label className={combo2Ready ? '' : 'disabled-option'}>
+                  <input type="checkbox" disabled={!combo2Ready} checked={wheelie2} onChange={(e) => setWheelie2(e.target.checked)} /> Wheelie
+                </label>
+                <label className={combo2Ready && smtEnabled ? '' : 'disabled-option'}>
+                  <input type="checkbox" disabled={!(combo2Ready && smtEnabled)} checked={smt2} onChange={(e) => setSmt2(e.target.checked)} /> SMT
+                </label>
+                <label className={combo2Ready && ssmtEnabled ? '' : 'disabled-option'}>
+                  <input type="checkbox" disabled={!(combo2Ready && ssmtEnabled)} checked={ssmt2} onChange={(e) => setSsmt2(e.target.checked)} /> SSMT
+                </label>
+              </>
+            )
+          })()}
+        </div>
+        <div className="sim-panel-stats">
+          {(() => {
+            const adv = advancedStats2
+            const basic = basicStats2
+            if (!adv && !basic) return null
+
+            return renderSimSidebarStats(adv, basic)
+          })()}
+        </div>
+      </div>
     </div>
   )
 
   return (
-    <div className="app">
+    <div className="app" data-theme={theme}>
       <header>
-        <h1>Combo Compare</h1>
-        <div className="mode-selector">
-          <button
-            className={statsMode === 'vanilla' ? 'active' : ''}
-            onClick={() => changeStatsMode('vanilla')}
-          >
-            Vanilla Stats
-          </button>
-          <button
-            className={statsMode === 'limitless' ? 'active' : ''}
-            onClick={() => changeStatsMode('limitless')}
-          >
-            Limitless Stats
-          </button>
+        <div className="header-combo combo1">
+          <h4>Combo 1</h4>
+          <select className="combo1-select" value={selectedVehicle1} onChange={(e) => setSelectedVehicle1(e.target.value)}>
+            <option value="">Select Vehicle</option>
+            {vehicles.map(vehicle => (
+              <option key={vehicle.id} value={vehicle.id}>{vehicle.name}</option>
+            ))}
+          </select>
+          <select className="combo1-select" value={selectedCharacter1} onChange={(e) => setSelectedCharacter1(e.target.value)}>
+            <option value="">Select Character</option>
+            {characters.map(character => (
+              <option key={character.id} value={character.id}>{character.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="header-center">
+          <h1>Combo Compare</h1>
+          <div className="mode-selector">
+            <button
+              className={statsMode === 'vanilla' ? 'active' : ''}
+              onClick={() => changeStatsMode('vanilla')}
+            >
+              Vanilla Stats
+            </button>
+            <button
+              className={statsMode === 'limitless' ? 'active' : ''}
+              onClick={() => changeStatsMode('limitless')}
+            >
+              Limitless Stats
+            </button>
+          </div>
+          <div className="theme-toggle">
+            <button
+              className="theme-toggle-button"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-pressed={theme === 'dark'}
+            >
+              {theme === 'dark' ? <MoonIcon className="theme-toggle-icon" /> : <SunIcon className="theme-toggle-icon" />}
+            </button>
+          </div>
+        </div>
+
+        <div className="header-combo combo2">
+          <div className="combo-label">Combo 2</div>
+          <select className="combo2-select" value={selectedVehicle2} onChange={(e) => setSelectedVehicle2(e.target.value)}>
+            <option value="">Select Vehicle</option>
+            {vehicles.map(vehicle => (
+              <option key={vehicle.id} value={vehicle.id}>{vehicle.name}</option>
+            ))}
+          </select>
+          <select className="combo2-select" value={selectedCharacter2} onChange={(e) => setSelectedCharacter2(e.target.value)}>
+            <option value="">Select Character</option>
+            {characters.map(character => (
+              <option key={character.id} value={character.id}>{character.name}</option>
+            ))}
+          </select>
         </div>
       </header>
 
@@ -637,8 +911,30 @@ function App() {
       <main>
         {activeTab === 'basic' && renderBasicStats()}
         {activeTab === 'advanced' && renderAdvancedStats()}
+          
         {activeTab === 'simulation' && renderSimulation()}
       </main>
+      
+      <footer className="app-footer">
+        <div className="footer-inner">
+          <div className="footer-about">
+            <div className="footer-title">About</div>
+            <div className="about-text">Combo Compare is a tool to compare Mario Kart Wii vehicle &amp; character combinations. It also provides simple simulations to compare combo effectiveness.</div>
+          </div>
+          <div className="footer-links">
+            <div className="footer-title">Links</div>
+            <a href="https://wiki.tockdom.com/wiki/KartParam.bin" target="_blank" rel="noopener noreferrer">Vanilla Stats</a>
+            <a href="https://wiki.tockdom.com/wiki/Mario_Kart_Wii:_Limitless" target="_blank" rel="noopener noreferrer">Limitless Wiki</a>
+            <a href="https://discord.com/invite/syF6AsTZTn" target="_blank" rel="noopener noreferrer">Limitless Discord</a>
+            <a href="https://github.com/Blazico1/combo-compare" target="_blank" rel="noopener noreferrer">GitHub</a>
+          </div>
+          <div className="footer-credits">
+            <div className="footer-title">Credits</div>
+            <div>Thanks to <a className="credit-link" href="https://www.youtube.com/@campbellmop355" target="_blank" rel="noopener noreferrer">CampbellMop</a> for providing useful information on the workings of Mario Kart Wii.</div>
+            <div>Built by Blazico.</div>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }

@@ -5,8 +5,11 @@
 body {
   margin: 0;
   padding: 0;
-  background: #2e2e2e;
-  color: white;
+  /* color/background are driven by the theme variables on :root */
+  background-color: var(--bg-dark);
+  color: var(--text);
+  /* animate theme changes applied via CSS variables */
+  transition: background-color var(--transition) ease, color var(--transition) ease;
 }
 
 #root {

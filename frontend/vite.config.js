@@ -19,6 +19,9 @@ function ensureRootIndexPlugin() {
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // When deploying under a path like example.com/combo-compare, set base so
+  // built asset links include the path prefix.
+  base: '/combo-compare/',
   // Disable fast refresh to avoid runtime preamble detection issues seen in
   // some dev environments (the UI will still hot-reload on full reloads).
   plugins: [react({ fastRefresh: false }), ensureRootIndexPlugin()],

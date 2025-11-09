@@ -198,7 +198,12 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
         for character in characters:
             cstats = character.get_basic_stats()
             for key in keys:
-                max_character_stats[key] = max(max_character_stats[key], cstats[key])
+                if key == "acceleration":
+                    # Use simple average for characters
+                    accel = sum(cstats["As"]) / len(cstats["As"]) if cstats["As"] else 0
+                    max_character_stats[key] = max(max_character_stats[key], accel)
+                else:
+                    max_character_stats[key] = max(max_character_stats[key], cstats[key])
     
     max_totals = EMPTY_DICT()
     for key in keys:
@@ -219,7 +224,12 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
         for character in characters:
             cstats = character.get_basic_stats()
             for key in keys:
-                min_character_stats[key] = min(min_character_stats[key], cstats[key])
+                if key == "acceleration":
+                    # Use simple average for characters
+                    accel = sum(cstats["As"]) / len(cstats["As"]) if cstats["As"] else 0
+                    min_character_stats[key] = min(min_character_stats[key], accel)
+                else:
+                    min_character_stats[key] = min(min_character_stats[key], cstats[key])
     else:
         min_character_stats = EMPTY_DICT()
 
@@ -241,12 +251,6 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
         max_totals["acceleration"] = max_accel
         min_totals["acceleration"] = min_accel
 
-    # Raise an error if one of the max stats is 0
-    for key in keys:
-        if max_totals[key] == 0:
-            if max_totals[key] != min_totals[key]:
-                raise ValueError("One of the max stats is 0")
-    
     # Raise an error if one of the min stats is inf
     if float('inf') in min_totals.values():
         raise ValueError("One of the min stats is inf")  
@@ -273,11 +277,18 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
             total_weight += weight
         stats["acceleration"] = weighted_sum / total_weight if total_weight > 0 else 0
 
+    else:
+        # For characters only, use simple average of A values
+        stats["acceleration"] = sum(c_stats["As"]) / len(c_stats["As"]) if c_stats["As"] else 0
 
     # Normalise the stats
     norm_stats = EMPTY_DICT()
     for key in keys:
-        norm_stats[key] = (stats[key] - min_totals[key]) / (max_totals[key] - min_totals[key])
+        denom = max_totals[key] - min_totals[key]
+        if denom == 0:
+            norm_stats[key] = 0.5
+        else:
+            norm_stats[key] = (stats[key] - min_totals[key]) / denom
 
     return norm_stats       
 
