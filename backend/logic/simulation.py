@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def simulate_accel(vstats, cstats, wheelie=False, ssmt=False, time=10.0):
     """Simulate a full combo given vehicle and character basic-stats dicts.
 
@@ -14,7 +15,7 @@ def simulate_accel(vstats, cstats, wheelie=False, ssmt=False, time=10.0):
         return np.array([]), np.array([]), np.array([])
 
     v_speed = vstats.get('speed', 0)
-    c_speed = cstats.get('speed', 0) 
+    c_speed = cstats.get('speed', 0)
     top_speed = v_speed + c_speed
 
     if wheelie:
@@ -88,12 +89,6 @@ def simulate_mini_turbo(vstats, cstats, wheelie=False, SMT=False, time=10.0):
     c_speed = cstats.get('speed', 0)
     speed = v_speed + c_speed
 
-    v_As = vstats.get('As', [0, 0, 0, 0])
-    c_As = cstats.get('As', [0, 0, 0, 0])
-    As = [v + c for v, c in zip(v_As, c_As)]
-
-    Ts = vstats.get('Ts', [0, 0, 0])
-
     v_MT = vstats.get('mini_turbo', 0)
     c_MT = cstats.get('mini_turbo', 0)
     MT = v_MT + c_MT
@@ -114,12 +109,12 @@ def simulate_mini_turbo(vstats, cstats, wheelie=False, SMT=False, time=10.0):
     for t in np.arange(0, time*60):  # 60 FPS
         current_speed = speeds[-1]
         current_distance = distances[-1]
-        
+
         if t <= MT or (SMT and t <= 3*MT):
-            #MT is active
+            # MT is active
             current_speed = min(current_speed + 3, top_speed_boost)
         else:
-            #MT ended
+            # MT ended
             current_speed = max(current_speed - 3, top_speed)
 
         current_distance += current_speed

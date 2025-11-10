@@ -1,5 +1,4 @@
 import struct
-import numpy as np
 from logic.id import id_to_vehicle, id_to_driver
 
 def EMPTY_DICT():
@@ -63,11 +62,11 @@ class StatsBase:
     def __repr__(self):
         return (f"StatsBase(name={self.name}, id={self.id:X}, num_tires={self.num_tires}, drift_type={self.drift_type}, "
                 f"weight_class={self.weight_class}, weight={self.weight:.2f}, ...)")
-    
+
     def is_vehicle(self):
         self.name = id_to_vehicle(self.id)
         self.vehicle_flag = True
-    
+
     def is_driver(self):
         self.name = id_to_driver(self.id)
         self.vehicle_flag = False
@@ -79,7 +78,7 @@ class StatsBase:
 
         As = [self.std_accel_a0, self.std_accel_a1, self.std_accel_a2, self.std_accel_a3]
         Ts = [self.std_accel_t1, self.std_accel_t2, self.std_accel_t3]
-        
+
         offroad = self.speed_multipliers[2] + self.speed_multipliers[3] + self.speed_multipliers[4]
         weight = self.weight
         handling = self.manual_handling
@@ -92,7 +91,7 @@ class StatsBase:
             "mini_turbo": mini_turbo,
             "drift": drift,
             "As": As,
-            "Ts": Ts,	
+            "Ts": Ts,
             "offroad": offroad,
             "weight": weight,
             "handling": handling,
@@ -103,33 +102,33 @@ class StatsBase:
 
     def _calculate_weighted_acceleration(self, As, Ts):
         """Calculate weighted average acceleration based on T thresholds.
-        
+
         The T values define speed fractions where acceleration changes:
         - 0 to T1: acceleration A0
         - T1 to T2: acceleration A1
-        - T2 to T3: acceleration A2  
+        - T2 to T3: acceleration A2
         - T3 to 1.0: acceleration A3
-        
+
         Returns the weighted average acceleration.
         """
         # Ensure T values are sorted and clamped to [0, 1]
         sorted_ts = sorted([max(0, min(1, t)) for t in Ts])
-        
+
         # Add 0 at the beginning and 1 at the end
         t_ranges = [0] + sorted_ts + [1.0]
-        
+
         weighted_sum = 0
         total_weight = 0
-        
+
         for i in range(len(t_ranges) - 1):
             # Weight is the size of this speed range
             weight = t_ranges[i + 1] - t_ranges[i]
             # Acceleration for this range
             accel = As[min(i, len(As) - 1)]  # Use last A if we run out
-            
+
             weighted_sum += accel * weight
             total_weight += weight
-            
+
         # Return weighted average
         return weighted_sum / total_weight if total_weight > 0 else 0
 
@@ -179,12 +178,12 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
     '''
     Normalise the stats of the given vehicles and characters
     '''
-    
+
     keys = ["speed", "mini_turbo", "drift", "offroad", "weight", "handling", "acceleration"]
 
     if not vehicles and not characters:
         raise ValueError("At least one of vehicles or characters must be provided")
-    
+
     # Get the max stats for each category
     max_vehicle_stats = EMPTY_DICT()
     if vehicles:
@@ -204,11 +203,11 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
                     max_character_stats[key] = max(max_character_stats[key], accel)
                 else:
                     max_character_stats[key] = max(max_character_stats[key], cstats[key])
-    
+
     max_totals = EMPTY_DICT()
     for key in keys:
-        max_totals[key] = (max_vehicle_stats[key] + max_character_stats[key])
-    
+        max_totals[key] = max_vehicle_stats[key] + max_character_stats[key]
+
     # Get the min stats for each category
     min_vehicle_stats = INF_DICT()
     if vehicles:
@@ -253,8 +252,8 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
 
     # Raise an error if one of the min stats is inf
     if float('inf') in min_totals.values():
-        raise ValueError("One of the min stats is inf")  
-    
+        raise ValueError("One of the min stats is inf")
+
     # Combine vehicle and character stats
     stats = EMPTY_DICT()
     for key in keys:
@@ -290,7 +289,7 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
         else:
             norm_stats[key] = (stats[key] - min_totals[key]) / denom
 
-    return norm_stats       
+    return norm_stats
 
 def parse_stats(file_path: str) -> list[StatsBase]:
     with open(file_path, 'rb') as f:

@@ -11,7 +11,6 @@ RUN python -m pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 COPY backend /app
-COPY logic /app/logic
 COPY backend/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 

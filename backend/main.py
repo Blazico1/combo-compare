@@ -1,10 +1,4 @@
 import os
-import sys
-
-# Ensure the repository root is on sys.path so top-level packages (logic/) import correctly
-parent_dir = os.path.dirname(os.path.dirname(__file__))
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)
 from typing import Dict, Any, Optional
 
 from fastapi import FastAPI, HTTPException
@@ -329,4 +323,3 @@ def api_health():
 
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=8000)
-
