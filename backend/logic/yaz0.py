@@ -8,7 +8,9 @@ API:
 
 If `data` does not start with the Yaz0 magic, the input is returned as-is.
 """
+
 from __future__ import annotations
+
 
 def decompress(data: bytes) -> bytes:
     """Decompress a Yaz0-compressed bytes object.
@@ -19,11 +21,11 @@ def decompress(data: bytes) -> bytes:
     if not isinstance(data, (bytes, bytearray)):
         raise TypeError("data must be bytes or bytearray")
 
-    if len(data) < 16 or data[0:4] != b'Yaz0':
+    if len(data) < 16 or data[0:4] != b"Yaz0":
         return bytes(data)
 
     # Uncompressed size is big-endian uint32 at offset 4
-    uncompressed_size = int.from_bytes(data[4:8], 'big')
+    uncompressed_size = int.from_bytes(data[4:8], "big")
 
     src = 16  # compressed data starts at offset 0x10
     src_len = len(data)
@@ -32,7 +34,7 @@ def decompress(data: bytes) -> bytes:
     # decode loop
     while len(dst) < uncompressed_size:
         if src >= src_len:
-            raise ValueError('Unexpected end of input while reading code byte')
+            raise ValueError("Unexpected end of input while reading code byte")
         code = data[src]
         src += 1
 
@@ -40,13 +42,13 @@ def decompress(data: bytes) -> bytes:
             # If MSB is set: literal
             if code & 0x80:
                 if src >= src_len:
-                    raise ValueError('Unexpected end of input while copying literal')
+                    raise ValueError("Unexpected end of input while copying literal")
                 dst.append(data[src])
                 src += 1
             else:
                 # Back-reference: read two bytes
                 if src + 1 >= src_len:
-                    raise ValueError('Unexpected end of input in backref')
+                    raise ValueError("Unexpected end of input in backref")
                 b1 = data[src]
                 b2 = data[src + 1]
                 src += 2
@@ -59,7 +61,9 @@ def decompress(data: bytes) -> bytes:
                 if copy_len == 0:
                     # extended length stored in next byte
                     if src >= src_len:
-                        raise ValueError('Unexpected end of input reading extended length')
+                        raise ValueError(
+                            "Unexpected end of input reading extended length"
+                        )
                     ext = data[src]
                     src += 1
                     copy_len = ext + 0x12
@@ -68,7 +72,7 @@ def decompress(data: bytes) -> bytes:
 
                 # copy from previously decoded bytes
                 if dist > len(dst):
-                    raise ValueError('Back-reference distance exceeds decoded data')
+                    raise ValueError("Back-reference distance exceeds decoded data")
 
                 for _ in range(copy_len):
                     dst.append(dst[-dist])

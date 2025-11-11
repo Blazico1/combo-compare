@@ -1,23 +1,81 @@
 import struct
 from logic.id import id_to_vehicle, id_to_driver
 
+
 def EMPTY_DICT():
-    return {"speed": 0, "mini_turbo": 0, "drift": 0, "As": [0,0,0,0], "Ts": [0,0,0], "offroad": 0, "weight": 0, "handling": 0, "acceleration": 0}
+    return {
+        "speed": 0,
+        "mini_turbo": 0,
+        "drift": 0,
+        "As": [0, 0, 0, 0],
+        "Ts": [0, 0, 0],
+        "offroad": 0,
+        "weight": 0,
+        "handling": 0,
+        "acceleration": 0,
+    }
+
 
 def INF_DICT():
-    return {"speed": float('inf'), "mini_turbo": float('inf'), "drift": float('inf'), "As": [float('inf'),float('inf'),float('inf'),float('inf')], "Ts": [float('inf'),float('inf'),float('inf')], "offroad": float('inf'), "weight": float('inf'), "handling": float('inf'), "acceleration": float('inf')}
+    return {
+        "speed": float("inf"),
+        "mini_turbo": float("inf"),
+        "drift": float("inf"),
+        "As": [float("inf"), float("inf"), float("inf"), float("inf")],
+        "Ts": [float("inf"), float("inf"), float("inf")],
+        "offroad": float("inf"),
+        "weight": float("inf"),
+        "handling": float("inf"),
+        "acceleration": float("inf"),
+    }
+
 
 class StatsBase:
-    '''
+    """
     Class to store the stats of a vehicle or character
-    '''
+    """
 
-    def __init__(self, id, num_tires, drift_type, weight_class, unknown, weight, bump_deviation, speed, speed_in_turn, tilt,
-                 std_accel_a0, std_accel_a1, std_accel_a2, std_accel_a3, std_accel_t1, std_accel_t2, std_accel_t3,
-                 drift_accel_a0, drift_accel_a1, drift_accel_t1, manual_handling, auto_handling, handling_reactivity,
-                 manual_drift, auto_drift, drift_reactivity, outside_drift_angle, outside_drift_decrement, mini_turbo_duration,
-                 speed_multipliers, rotation_multipliers, rotating_items_z_radius, rotating_items_x_radius,
-                 rotating_items_y_distance, rotating_items_z_distance, max_normal_accel, mega_mushroom_scale, tire_distance):
+    def __init__(
+        self,
+        id,
+        num_tires,
+        drift_type,
+        weight_class,
+        unknown,
+        weight,
+        bump_deviation,
+        speed,
+        speed_in_turn,
+        tilt,
+        std_accel_a0,
+        std_accel_a1,
+        std_accel_a2,
+        std_accel_a3,
+        std_accel_t1,
+        std_accel_t2,
+        std_accel_t3,
+        drift_accel_a0,
+        drift_accel_a1,
+        drift_accel_t1,
+        manual_handling,
+        auto_handling,
+        handling_reactivity,
+        manual_drift,
+        auto_drift,
+        drift_reactivity,
+        outside_drift_angle,
+        outside_drift_decrement,
+        mini_turbo_duration,
+        speed_multipliers,
+        rotation_multipliers,
+        rotating_items_z_radius,
+        rotating_items_x_radius,
+        rotating_items_y_distance,
+        rotating_items_z_distance,
+        max_normal_accel,
+        mega_mushroom_scale,
+        tire_distance,
+    ):
         self.name = None
         self.id = id
         self.num_tires = num_tires
@@ -60,8 +118,10 @@ class StatsBase:
         self.vehicle_flag = False
 
     def __repr__(self):
-        return (f"StatsBase(name={self.name}, id={self.id:X}, num_tires={self.num_tires}, drift_type={self.drift_type}, "
-                f"weight_class={self.weight_class}, weight={self.weight:.2f}, ...)")
+        return (
+            f"StatsBase(name={self.name}, id={self.id:X}, num_tires={self.num_tires}, drift_type={self.drift_type}, "
+            f"weight_class={self.weight_class}, weight={self.weight:.2f}, ...)"
+        )
 
     def is_vehicle(self):
         self.name = id_to_vehicle(self.id)
@@ -76,10 +136,19 @@ class StatsBase:
         mini_turbo = self.mini_turbo_duration
         drift = self.manual_drift
 
-        As = [self.std_accel_a0, self.std_accel_a1, self.std_accel_a2, self.std_accel_a3]
+        As = [
+            self.std_accel_a0,
+            self.std_accel_a1,
+            self.std_accel_a2,
+            self.std_accel_a3,
+        ]
         Ts = [self.std_accel_t1, self.std_accel_t2, self.std_accel_t3]
 
-        offroad = self.speed_multipliers[2] + self.speed_multipliers[3] + self.speed_multipliers[4]
+        offroad = (
+            self.speed_multipliers[2]
+            + self.speed_multipliers[3]
+            + self.speed_multipliers[4]
+        )
         weight = self.weight
         handling = self.manual_handling
 
@@ -95,8 +164,7 @@ class StatsBase:
             "offroad": offroad,
             "weight": weight,
             "handling": handling,
-            "acceleration": acceleration
-
+            "acceleration": acceleration,
         }
         return stats
 
@@ -134,52 +202,66 @@ class StatsBase:
 
     def get_advanced_stats(self):
         stats = {
-            'num_tires': self.num_tires,
-            'drift_type': self.drift_type,
-            'weight_class': self.weight_class,
-            'unknown': self.unknown,
-            'weight': self.weight,
-            'bump_deviation': self.bump_deviation,
-            'speed': self.speed,
-            'speed_in_turn': self.speed_in_turn,
-            'tilt': self.tilt,
-            'std_accel_a0': self.std_accel_a0,
-            'std_accel_a1': self.std_accel_a1,
-            'std_accel_a2': self.std_accel_a2,
-            'std_accel_a3': self.std_accel_a3,
-            'std_accel_t1': self.std_accel_t1,
-            'std_accel_t2': self.std_accel_t2,
-            'std_accel_t3': self.std_accel_t3,
-            'drift_accel_a0': self.drift_accel_a0,
-            'drift_accel_a1': self.drift_accel_a1,
-            'drift_accel_t1': self.drift_accel_t1,
-            'manual_handling': self.manual_handling,
-            'auto_handling': self.auto_handling,
-            'handling_reactivity': self.handling_reactivity,
-            'manual_drift': self.manual_drift,
-            'auto_drift': self.auto_drift,
-            'drift_reactivity': self.drift_reactivity,
-            'outside_drift_angle': self.outside_drift_angle,
-            'outside_drift_decrement': self.outside_drift_decrement,
-            'mini_turbo_duration': self.mini_turbo_duration,
-            'speed_multipliers': self.speed_multipliers,
-            'rotation_multipliers': self.rotation_multipliers,
-            'rotating_items_z_radius': self.rotating_items_z_radius,
-            'rotating_items_x_radius': self.rotating_items_x_radius,
-            'rotating_items_y_distance': self.rotating_items_y_distance,
-            'rotating_items_z_distance': self.rotating_items_z_distance,
-            'max_normal_accel': self.max_normal_accel,
-            'mega_mushroom_scale': self.mega_mushroom_scale,
-            'tire_distance': self.tire_distance
+            "num_tires": self.num_tires,
+            "drift_type": self.drift_type,
+            "weight_class": self.weight_class,
+            "unknown": self.unknown,
+            "weight": self.weight,
+            "bump_deviation": self.bump_deviation,
+            "speed": self.speed,
+            "speed_in_turn": self.speed_in_turn,
+            "tilt": self.tilt,
+            "std_accel_a0": self.std_accel_a0,
+            "std_accel_a1": self.std_accel_a1,
+            "std_accel_a2": self.std_accel_a2,
+            "std_accel_a3": self.std_accel_a3,
+            "std_accel_t1": self.std_accel_t1,
+            "std_accel_t2": self.std_accel_t2,
+            "std_accel_t3": self.std_accel_t3,
+            "drift_accel_a0": self.drift_accel_a0,
+            "drift_accel_a1": self.drift_accel_a1,
+            "drift_accel_t1": self.drift_accel_t1,
+            "manual_handling": self.manual_handling,
+            "auto_handling": self.auto_handling,
+            "handling_reactivity": self.handling_reactivity,
+            "manual_drift": self.manual_drift,
+            "auto_drift": self.auto_drift,
+            "drift_reactivity": self.drift_reactivity,
+            "outside_drift_angle": self.outside_drift_angle,
+            "outside_drift_decrement": self.outside_drift_decrement,
+            "mini_turbo_duration": self.mini_turbo_duration,
+            "speed_multipliers": self.speed_multipliers,
+            "rotation_multipliers": self.rotation_multipliers,
+            "rotating_items_z_radius": self.rotating_items_z_radius,
+            "rotating_items_x_radius": self.rotating_items_x_radius,
+            "rotating_items_y_distance": self.rotating_items_y_distance,
+            "rotating_items_z_distance": self.rotating_items_z_distance,
+            "max_normal_accel": self.max_normal_accel,
+            "mega_mushroom_scale": self.mega_mushroom_scale,
+            "tire_distance": self.tire_distance,
         }
         return stats
 
-def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), vehicles: list = [], characters: list = []) -> dict:
-    '''
-    Normalise the stats of the given vehicles and characters
-    '''
 
-    keys = ["speed", "mini_turbo", "drift", "offroad", "weight", "handling", "acceleration"]
+def normalise_stats(
+    v_stats: dict = EMPTY_DICT(),
+    c_stats: dict = EMPTY_DICT(),
+    vehicles: list = [],
+    characters: list = [],
+) -> dict:
+    """
+    Normalise the stats of the given vehicles and characters
+    """
+
+    keys = [
+        "speed",
+        "mini_turbo",
+        "drift",
+        "offroad",
+        "weight",
+        "handling",
+        "acceleration",
+    ]
 
     if not vehicles and not characters:
         raise ValueError("At least one of vehicles or characters must be provided")
@@ -202,7 +284,9 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
                     accel = sum(cstats["As"]) / len(cstats["As"]) if cstats["As"] else 0
                     max_character_stats[key] = max(max_character_stats[key], accel)
                 else:
-                    max_character_stats[key] = max(max_character_stats[key], cstats[key])
+                    max_character_stats[key] = max(
+                        max_character_stats[key], cstats[key]
+                    )
 
     max_totals = EMPTY_DICT()
     for key in keys:
@@ -228,17 +312,19 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
                     accel = sum(cstats["As"]) / len(cstats["As"]) if cstats["As"] else 0
                     min_character_stats[key] = min(min_character_stats[key], accel)
                 else:
-                    min_character_stats[key] = min(min_character_stats[key], cstats[key])
+                    min_character_stats[key] = min(
+                        min_character_stats[key], cstats[key]
+                    )
     else:
         min_character_stats = EMPTY_DICT()
 
     min_totals = EMPTY_DICT()
     for key in keys:
-        min_totals[key] = (min_vehicle_stats[key] + min_character_stats[key])
+        min_totals[key] = min_vehicle_stats[key] + min_character_stats[key]
 
     # Handle acceleration separately
     max_accel = 0
-    min_accel = float('inf')
+    min_accel = float("inf")
 
     if vehicles:
         for vehicle in vehicles:
@@ -251,7 +337,7 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
         min_totals["acceleration"] = min_accel
 
     # Raise an error if one of the min stats is inf
-    if float('inf') in min_totals.values():
+    if float("inf") in min_totals.values():
         raise ValueError("One of the min stats is inf")
 
     # Combine vehicle and character stats
@@ -278,7 +364,9 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
 
     else:
         # For characters only, use simple average of A values
-        stats["acceleration"] = sum(c_stats["As"]) / len(c_stats["As"]) if c_stats["As"] else 0
+        stats["acceleration"] = (
+            sum(c_stats["As"]) / len(c_stats["As"]) if c_stats["As"] else 0
+        )
 
     # Normalise the stats
     norm_stats = EMPTY_DICT()
@@ -291,17 +379,18 @@ def normalise_stats(v_stats: dict = EMPTY_DICT(), c_stats: dict = EMPTY_DICT(), 
 
     return norm_stats
 
+
 def parse_stats(file_path: str) -> list[StatsBase]:
-    with open(file_path, 'rb') as f:
+    with open(file_path, "rb") as f:
         data = f.read()
 
-    num_units = struct.unpack_from('>I', data, 0x00)[0]
+    num_units = struct.unpack_from(">I", data, 0x00)[0]
     offset = 0x04
 
     units = []
 
     for i in range(num_units):
-        section_data = struct.unpack_from('>3I24f1I71f', data, offset)
+        section_data = struct.unpack_from(">3I24f1I71f", data, offset)
         unit = StatsBase(
             id=i,
             num_tires=section_data[0],
@@ -340,17 +429,18 @@ def parse_stats(file_path: str) -> list[StatsBase]:
             rotating_items_z_distance=section_data[95],
             max_normal_accel=section_data[96],
             mega_mushroom_scale=section_data[97],
-            tire_distance=section_data[98]
+            tire_distance=section_data[98],
         )
         units.append(unit)
         offset += 99 * 4  # Each section is 99 32-bit values
 
     return units
 
+
 def set_names(units: list[StatsBase], is_driver: bool):
-    '''
+    """
     Set the names of the units
-    '''
+    """
 
     for unit in units:
         if is_driver:

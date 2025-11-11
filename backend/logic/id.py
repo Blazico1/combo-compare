@@ -74,7 +74,8 @@ def id_to_vehicle(id):
             return "Phantom"
         case _:
             return f"Unknown vehicle {id:X}"
-        
+
+
 def id_to_driver(id):
     match id:
         case 0x00:

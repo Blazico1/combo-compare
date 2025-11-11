@@ -12,18 +12,18 @@ def simulate_accel(vstats, cstats, wheelie=False, ssmt=False, time=10.0):
         # Return empty times/speeds/distances to avoid callers indexing into None
         return np.array([]), np.array([]), np.array([])
 
-    v_speed = vstats.get('speed', 0)
-    c_speed = cstats.get('speed', 0)
+    v_speed = vstats.get("speed", 0)
+    c_speed = cstats.get("speed", 0)
     top_speed = v_speed + c_speed
 
     if wheelie:
         top_speed *= 1.15
 
-    v_As = vstats.get('As', [0, 0, 0, 0])
-    c_As = cstats.get('As', [0, 0, 0, 0])
+    v_As = vstats.get("As", [0, 0, 0, 0])
+    c_As = cstats.get("As", [0, 0, 0, 0])
     As = [v + c for v, c in zip(v_As, c_As)]
 
-    Ts = vstats.get('Ts', [0, 0, 0]) if vstats else [0, 0, 0]
+    Ts = vstats.get("Ts", [0, 0, 0]) if vstats else [0, 0, 0]
 
     boost_top_speed = top_speed * (1.35 if wheelie else 1.2) if ssmt else top_speed
 
@@ -83,12 +83,12 @@ def simulate_mini_turbo(vstats, cstats, wheelie=False, SMT=False, time=10.0):
         return np.array([]), np.array([]), np.array([])
 
     # Compute combined speed and accel arrays similar to simulate_combo
-    v_speed = vstats.get('speed', 0)
-    c_speed = cstats.get('speed', 0)
+    v_speed = vstats.get("speed", 0)
+    c_speed = cstats.get("speed", 0)
     speed = v_speed + c_speed
 
-    v_MT = vstats.get('mini_turbo', 0)
-    c_MT = cstats.get('mini_turbo', 0)
+    v_MT = vstats.get("mini_turbo", 0)
+    c_MT = cstats.get("mini_turbo", 0)
     MT = v_MT + c_MT
 
     # MT boost model
@@ -104,11 +104,11 @@ def simulate_mini_turbo(vstats, cstats, wheelie=False, SMT=False, time=10.0):
     current_speed = speed
     current_distance = 0
 
-    for t in np.arange(0, time*60):  # 60 FPS
+    for t in np.arange(0, time * 60):  # 60 FPS
         current_speed = speeds[-1]
         current_distance = distances[-1]
 
-        if t <= MT or (SMT and t <= 3*MT):
+        if t <= MT or (SMT and t <= 3 * MT):
             # MT is active
             current_speed = min(current_speed + 3, top_speed_boost)
         else:
