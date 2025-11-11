@@ -278,24 +278,24 @@ def api_simulate(data: Dict[str, Any]):
             if vehicle2 is not None:
                 result2 = simulation.simulate_mini_turbo(vehicle2.get_basic_stats(), character2.get_basic_stats(), wheelie=wheelie2, SMT=smt2, time=time)
 
-        # Convert distances from internal units (units per frame) to metres.
-        # The simulation produces distances in 'units' (u) per frame.
-        # By convention 216 u == 1 m, so divide by 216 to get metres.
-        d1_m = (result1[2] / 216.0) if result1[2] is not None else result1[2]
+        # Distances returned by the simulation are in internal units per frame (u/f).
+        # We return distances in units here and let the frontend convert to metres
+        # when it needs to (1 m == 216 u).
+        d1_u = result1[2]
         out = {
             'combo1': {
                 'times': result1[0].tolist(),
                 'speeds': result1[1].tolist(),
-                'distances': d1_m.tolist(),
+                'distances': d1_u.tolist(),
             }
         }
         if result2 is not None:
             _d2 = result2[2]
-            d2_m = (_d2 / 216.0) if _d2 is not None else _d2
+            d2_u = _d2
             out['combo2'] = {
                 'times': result2[0].tolist(),
                 'speeds': result2[1].tolist(),
-                'distances': d2_m.tolist(),
+                'distances': d2_u.tolist(),
             }
         else:
             out['combo2'] = None

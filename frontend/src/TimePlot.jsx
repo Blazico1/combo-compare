@@ -113,7 +113,7 @@ function buildSegmentDatasets(times, values, posColor, negColor, solid = true) {
   return datasets
 }
 
-export default function TimePlot({ simulationResult, differential }) {
+export default function TimePlot({ simulationResult, differential, unit = 'km/h' }) {
   // simulationResult expected shape: { combo1: { times, speeds, distances }, combo2: {...} }
   const chartGridColor = getCssVar('--grid') || '#444'
   const combo1Color = getCssVar('--accent-2') || '#2244FF'
@@ -122,12 +122,20 @@ export default function TimePlot({ simulationResult, differential }) {
   const dataNormal = useMemo(() => {
     // Return null only when there's no data for either combo.
     if (!simulationResult || (!simulationResult.combo1 && !simulationResult.combo2)) return null
-    const t1 = simulationResult.combo1?.times || []
-    const s1 = simulationResult.combo1?.speeds || []
-    const d1 = simulationResult.combo1?.distances || []
-    const t2 = simulationResult.combo2?.times || []
-    const s2 = simulationResult.combo2?.speeds || []
-    const d2 = simulationResult.combo2?.distances || []
+  const t1 = simulationResult.combo1?.times || []
+  const s1 = simulationResult.combo1?.speeds || []
+  const d1 = simulationResult.combo1?.distances || []
+  const t2 = simulationResult.combo2?.times || []
+  const s2 = simulationResult.combo2?.speeds || []
+  const d2 = simulationResult.combo2?.distances || []
+
+      // Backend now returns distances in internal units per frame (u/f).
+      // If the UI requests 'km/h' (the default), convert units to metres by
+      // dividing by 216 (1 m == 216 u). If the UI requests 'u/f', display
+      // the raw units as-is.
+      const distFactor = unit === 'km/h' ? (1.0 / 216.0) : 1.0
+      const d1_display = Array.isArray(d1) ? d1.map(v => v * distFactor) : d1
+      const d2_display = Array.isArray(d2) ? d2.map(v => v * distFactor) : d2
 
     return {
       labels: t1.length >= t2.length ? t1 : t2,
@@ -154,7 +162,7 @@ export default function TimePlot({ simulationResult, differential }) {
         },
         {
           label: 'Distance Combo 1',
-          data: d1,
+          data: d1_display,
           borderColor: combo1Color,
           borderDash: [6, 4],
           backgroundColor: 'transparent',
@@ -165,7 +173,7 @@ export default function TimePlot({ simulationResult, differential }) {
         },
         {
           label: 'Distance Combo 2',
-          data: d2,
+          data: d2_display,
           borderColor: combo2Color,
           borderDash: [6, 4],
           backgroundColor: 'transparent',
@@ -176,22 +184,24 @@ export default function TimePlot({ simulationResult, differential }) {
         },
       ],
     }
-  }, [simulationResult, combo1Color, combo2Color])
+  }, [simulationResult, combo1Color, combo2Color, unit])
 
   const dataDiff = useMemo(() => {
     // Differential mode requires both combos present.
     if (!simulationResult || !simulationResult.combo1 || !simulationResult.combo2) return null
     const t = simulationResult.combo1.times || []
-    const s1 = simulationResult.combo1.speeds || []
-    const s2 = simulationResult.combo2?.speeds || []
-    const d1 = simulationResult.combo1.distances || []
-    const d2 = simulationResult.combo2?.distances || []
+  const s1 = simulationResult.combo1.speeds || []
+  const s2 = simulationResult.combo2?.speeds || []
+  const d1 = simulationResult.combo1.distances || []
+  const d2 = simulationResult.combo2?.distances || []
+
+      const distFactorDiff = unit === 'km/h' ? (1.0 / 216.0) : 1.0
 
     // make arrays same length
     const minLen = Math.min(t.length, s1.length, s2.length, d1.length, d2.length)
     const times = t.slice(0, minLen)
     const speedDiff = s1.slice(0, minLen).map((v, i) => v - s2[i])
-    const distDiff = d1.slice(0, minLen).map((v, i) => v - d2[i])
+      const distDiff = d1.slice(0, minLen).map((v, i) => (v - d2[i]) * distFactorDiff)
 
     // Build segment datasets with zero-cross interpolation so colored
     // segments meet exactly at zero. Use {x,y} points so we can insert
@@ -204,7 +214,7 @@ export default function TimePlot({ simulationResult, differential }) {
       speedDatasets,
       distDatasets,
     }
-  }, [simulationResult, combo1Color, combo2Color])
+  }, [simulationResult, combo1Color, combo2Color, unit])
 
   // If there's no data at all, render a gentle empty-overlay with instructions.
   const hasAnyData = simulationResult && (simulationResult.combo1 || simulationResult.combo2)
@@ -262,7 +272,10 @@ export default function TimePlot({ simulationResult, differential }) {
     const desiredTicks = (typeof xMin === 'number' && typeof xMax === 'number') ? Math.floor((xMax - xMin) / 0.5) + 1 : 12
     const maxTicks = Math.min(Math.max(desiredTicks, 6), 25)
 
-    const xScale = {
+  const speedLabel = unit === 'km/h' ? 'Speed (km/h)' : 'Speed (u/f)'
+  const distLabel = unit === 'km/h' ? 'Distance (m)' : 'Distance (u)'
+
+  const xScale = {
       ...commonOptions.scales.x,
       type: 'linear',
       min: xMin,
@@ -291,8 +304,8 @@ export default function TimePlot({ simulationResult, differential }) {
             ...commonOptions,
             scales: {
               x: xScale,
-              y: { type: 'linear', position: 'left', title: { display: true, text: 'Speed (km/h)' }, grid: { color: chartGridColor } },
-              y1: { type: 'linear', position: 'right', title: { display: true, text: 'Distance (m)' }, grid: { drawOnChartArea: false }, ticks: { display: true } },
+              y: { type: 'linear', position: 'left', title: { display: true, text: speedLabel }, grid: { color: chartGridColor } },
+              y1: { type: 'linear', position: 'right', title: { display: true, text: distLabel }, grid: { drawOnChartArea: false }, ticks: { display: true } },
             },
           }}
         />
@@ -323,13 +336,27 @@ export default function TimePlot({ simulationResult, differential }) {
     },
   }
 
+  // If differential data is not available (e.g., user deselected a combo),
+  // render a gentle placeholder instead of crashing when dataDiff is null.
+  if (!dataDiff) {
+    const muted = getCssVar('--muted') || '#888'
+    const height = 460
+    return (
+      <div style={{ height, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: muted, fontStyle: 'italic', textAlign: 'center', padding: 12 }}>
+          Differential mode requires two combos. Select both Combo 1 and Combo 2 to view differential charts.
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ height: 220 }}>
-        <Line data={{ labels: dataDiff.labels, datasets: dataDiff.speedDatasets }} options={{ ...commonOptions, scales: { x: xScaleDiff, y: { title: { display: true, text: 'Speed Difference (km/h)' }, grid: { color: chartGridColor } } } }} />
+        <Line data={{ labels: dataDiff.labels, datasets: dataDiff.speedDatasets }} options={{ ...commonOptions, scales: { x: xScaleDiff, y: { title: { display: true, text: unit === 'km/h' ? 'Speed Difference (km/h)' : 'Speed Difference (u/f)' }, grid: { color: chartGridColor } } } }} />
       </div>
       <div style={{ height: 220 }}>
-        <Line data={{ labels: dataDiff.labels, datasets: dataDiff.distDatasets }} options={{ ...commonOptions, scales: { x: xScaleDiff, y: { title: { display: true, text: 'Distance Difference (m)' }, grid: { color: chartGridColor } } } }} />
+        <Line data={{ labels: dataDiff.labels, datasets: dataDiff.distDatasets }} options={{ ...commonOptions, scales: { x: xScaleDiff, y: { title: { display: true, text: unit === 'km/h' ? 'Distance Difference (m)' : 'Distance Difference (u)' }, grid: { color: chartGridColor } } } }} />
       </div>
     </div>
   )

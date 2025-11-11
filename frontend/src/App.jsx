@@ -72,6 +72,8 @@ function App() {
   const [ssmt2, setSsmt2] = useState(false)
   const [simulationResult, setSimulationResult] = useState(null)
   const [loading, setLoading] = useState(false)
+  // Speed unit for TimePlot: 'km/h' or 'u/f' (units per frame). Default km/h
+  const [speedUnit, setSpeedUnit] = useState('km/h')
   // Theme state for Light/Dark mode
   const [theme, setTheme] = useState('dark')
 
@@ -541,13 +543,20 @@ function App() {
   }
 
   // Render simulation sidebar stats similar to the original PyQt UI.
-  const renderSimSidebarStats = (adv, basic) => {
-    if (!adv && !basic) return null
+  // Optimized: accept a single `stats` object which may be from advanced OR basic
+  // (callers should pass `adv ?? basic`). This reduces branching and duplicates.
+  const renderSimSidebarStats = (stats) => {
+    if (!stats) return null
 
     if (simulationType === 'acceleration') {
-      const speedVal = adv?.speed ?? basic?.speed
-      const As = adv ? [adv.std_accel_a0, adv.std_accel_a1, adv.std_accel_a2, adv.std_accel_a3] : (basic?.As || [])
-      const Ts = adv ? [adv.std_accel_t1, adv.std_accel_t2, adv.std_accel_t3] : (basic?.Ts || [])
+      const speedVal = stats?.speed
+      // advanced stats expose std_accel_a{0..3} while basic may expose As array
+      const As = typeof stats.std_accel_a0 !== 'undefined'
+        ? [stats.std_accel_a0, stats.std_accel_a1, stats.std_accel_a2, stats.std_accel_a3]
+        : (Array.isArray(stats.As) ? stats.As : [])
+      const Ts = typeof stats.std_accel_t1 !== 'undefined'
+        ? [stats.std_accel_t1, stats.std_accel_t2, stats.std_accel_t3]
+        : (Array.isArray(stats.Ts) ? stats.Ts : [])
 
       return (
         <div>
@@ -566,8 +575,8 @@ function App() {
     }
 
     // Mini-turbo: show speed and mini-turbo duration as integer frames
-    const speedVal = adv?.speed ?? basic?.speed
-    const mt = adv?.mini_turbo_duration ?? basic?.mini_turbo
+    const speedVal = stats?.speed
+    const mt = stats?.mini_turbo_duration ?? stats?.mini_turbo
     return (
       <div>
         <div className="sim-stat-line">Speed: {formatValue(speedVal)}</div>
@@ -730,6 +739,25 @@ function App() {
       {null}
       <div className="sim-panel combo1-panel">
         <h4>Combo 1</h4>
+        {/* Selected combo display: show vehicle + character names centered */}
+        <div className="combo-display">
+          {(() => {
+            const v = vehicles.find(vv => String(vv.id) === String(selectedVehicle1))
+            const c = characters.find(cc => String(cc.id) === String(selectedCharacter1))
+            if (!v && !c) return (
+              <div className="combo-display-lines">
+                <div className="combo-vehicle"><strong>-</strong></div>
+                <div className="combo-character"><strong>-</strong></div>
+              </div>
+            )
+            return (
+              <div className="combo-display-lines">
+                <div className="combo-vehicle">{v ? v.name : '-'}</div>
+                <div className="combo-character">{c ? c.name : '-'}</div>
+              </div>
+            )
+          })()}
+        </div>
         <div className="sim-panel-controls">
           {(() => {
             const combo1Ready = selectedVehicle1 && selectedCharacter1
@@ -758,7 +786,7 @@ function App() {
             const basic = basicStats1
             if (!adv && !basic) return null
 
-            return renderSimSidebarStats(adv, basic)
+            return renderSimSidebarStats(adv ?? basic)
           })()}
         </div>
       </div>
@@ -778,17 +806,55 @@ function App() {
         </div>
 
         <div className="simulation-plot">
-          <TimePlot simulationResult={simulationResult} differential={differentialMode} />
+          <TimePlot simulationResult={simulationResult} differential={differentialMode} unit={speedUnit} />
         </div>
 
-        <div style={{ marginTop: 'auto' }}>
-          <label style={{ marginRight: 8 }}>Simulation Time: {simulationTime}s</label>
-          <input type="range" min={3} max={20} value={simulationTime} onChange={(e) => setSimulationTime(parseInt(e.target.value, 10))} />
+        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ marginRight: 8 }}>Simulation Time: {simulationTime}s</label>
+            <input type="range" min={3} max={20} value={simulationTime} onChange={(e) => setSimulationTime(parseInt(e.target.value, 10))} />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ marginRight: 6 }}>Units:</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 12 }}>km/h</span>
+              <label className="unit-toggle" aria-label="Toggle speed units">
+                <input
+                  type="checkbox"
+                  className="unit-toggle-checkbox"
+                  checked={speedUnit === 'u/f'}
+                  onChange={(e) => setSpeedUnit(e.target.checked ? 'u/f' : 'km/h')}
+                />
+                <span className="unit-toggle-slider" aria-hidden="true" />
+              </label>
+              <span style={{ fontSize: 12 }}>u/f</span>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="sim-panel combo2-panel">
         <h4>Combo 2</h4>
+        {/* Selected combo display: show vehicle + character names centered */}
+        <div className="combo-display">
+          {(() => {
+            const v = vehicles.find(vv => String(vv.id) === String(selectedVehicle2))
+            const c = characters.find(cc => String(cc.id) === String(selectedCharacter2))
+            if (!v && !c) return (
+              <div className="combo-display-lines">
+                <div className="combo-vehicle"><strong>-</strong></div>
+                <div className="combo-character"><strong>-</strong></div>
+              </div>
+            )
+            return (
+              <div className="combo-display-lines">
+                <div className="combo-vehicle">{v ? v.name : '-'}</div>
+                <div className="combo-character">{c ? c.name : '-'}</div>
+              </div>
+            )
+          })()}
+        </div>
         <div className="sim-panel-controls">
           {(() => {
             const combo2Ready = selectedVehicle2 && selectedCharacter2
@@ -816,7 +882,7 @@ function App() {
             const basic = basicStats2
             if (!adv && !basic) return null
 
-            return renderSimSidebarStats(adv, basic)
+            return renderSimSidebarStats(adv ?? basic)
           })()}
         </div>
       </div>
@@ -931,7 +997,7 @@ function App() {
           <div className="footer-credits">
             <div className="footer-title">Credits</div>
             <div>Thanks to <a className="credit-link" href="https://www.youtube.com/@campbellmop355" target="_blank" rel="noopener noreferrer">CampbellMop</a> for providing useful information on the workings of Mario Kart Wii.</div>
-            <div>Built by Blazico.</div>
+            <div>Built by <a className="credit-link" href="https://github.com/Blazico1" target="_blank" rel="noopener noreferrer">Blazico</a>.</div>
           </div>
         </div>
       </footer>
