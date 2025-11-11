@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment, useMemo } from 'react'
+import { useState, useEffect, Fragment, useMemo, useCallback } from 'react'
 import './App.css'
 import {
   Chart as ChartJS,
@@ -113,34 +113,11 @@ function App() {
   })
 
   // Load initial data
-  useEffect(() => {
-    loadVehicles()
-    loadCharacters()
-  }, [statsMode])
+  // Load initial data (moved below so callbacks exist before use)
 
-  // Update stats when selections change
-  useEffect(() => {
-    if (selectedVehicle1 || selectedCharacter1) {
-      loadBasicStats(1)
-      loadAdvancedStats(1)
-    } else {
-      // Clear if nothing is selected
-      setBasicStats1(null)
-      setAdvancedStats1(null)
-    }
-  }, [selectedVehicle1, selectedCharacter1, statsMode])
+  // Update stats when selections change (moved below after callbacks are defined)
 
-  useEffect(() => {
-    if (selectedVehicle2 || selectedCharacter2) {
-      loadBasicStats(2)
-      loadAdvancedStats(2)
-    } else {
-      setBasicStats2(null)
-      setAdvancedStats2(null)
-    }
-  }, [selectedVehicle2, selectedCharacter2, statsMode])
-
-  const loadVehicles = async () => {
+  const loadVehicles = useCallback(async () => {
     try {
       const response = await fetch(`/api/vehicles?mode=${statsMode}`)
       const data = await response.json()
@@ -148,9 +125,9 @@ function App() {
     } catch (err) {
       console.error('loadVehicles failed', err)
     }
-  }
+  }, [statsMode])
 
-  const loadCharacters = async () => {
+  const loadCharacters = useCallback(async () => {
     try {
       const response = await fetch(`/api/characters?mode=${statsMode}`)
       const data = await response.json()
@@ -158,7 +135,7 @@ function App() {
     } catch (err) {
       console.error('loadCharacters failed', err)
     }
-  }
+  }, [statsMode])
 
   const changeStatsMode = (mode) => {
     // If the user clicked the currently-active mode, do nothing.
@@ -174,7 +151,7 @@ function App() {
     loadCharacters()
   }
 
-  const loadBasicStats = async (comboNum) => {
+  const loadBasicStats = useCallback(async (comboNum) => {
     const vehicle = comboNum === 1 ? selectedVehicle1 : selectedVehicle2
     const character = comboNum === 1 ? selectedCharacter1 : selectedCharacter2
 
@@ -202,9 +179,9 @@ function App() {
     } catch (err) {
       console.error('loadBasicStats failed', err)
     }
-  }
+  }, [selectedVehicle1, selectedVehicle2, selectedCharacter1, selectedCharacter2, statsMode])
 
-  const loadAdvancedStats = async (comboNum) => {
+  const loadAdvancedStats = useCallback(async (comboNum) => {
     const vehicle = comboNum === 1 ? selectedVehicle1 : selectedVehicle2
     const character = comboNum === 1 ? selectedCharacter1 : selectedCharacter2
 
@@ -231,9 +208,9 @@ function App() {
     } catch (err) {
       console.error('loadAdvancedStats failed', err)
     }
-  }
+  }, [selectedVehicle1, selectedVehicle2, selectedCharacter1, selectedCharacter2, statsMode])
 
-  const runSimulation = async () => {
+  const runSimulation = useCallback(async () => {
     // Require at least one fully-selected combo (vehicle + character)
     const combo1Ready = selectedVehicle1 && selectedCharacter1
     const combo2Ready = selectedVehicle2 && selectedCharacter2
@@ -314,7 +291,52 @@ function App() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [
+    selectedVehicle1,
+    selectedCharacter1,
+    selectedVehicle2,
+    selectedCharacter2,
+    differentialMode,
+    simulationTime,
+    statsMode,
+    vehicles,
+    characters,
+    wheelie1,
+    wheelie2,
+    smt1,
+    smt2,
+    ssmt1,
+    ssmt2,
+    simulationType,
+  ])
+
+  // Load initial data
+  useEffect(() => {
+    loadVehicles()
+    loadCharacters()
+  }, [statsMode, loadVehicles, loadCharacters])
+
+  // Update stats when selections change
+  useEffect(() => {
+    if (selectedVehicle1 || selectedCharacter1) {
+      loadBasicStats(1)
+      loadAdvancedStats(1)
+    } else {
+      // Clear if nothing is selected
+      setBasicStats1(null)
+      setAdvancedStats1(null)
+    }
+  }, [selectedVehicle1, selectedCharacter1, statsMode, loadBasicStats, loadAdvancedStats])
+
+  useEffect(() => {
+    if (selectedVehicle2 || selectedCharacter2) {
+      loadBasicStats(2)
+      loadAdvancedStats(2)
+    } else {
+      setBasicStats2(null)
+      setAdvancedStats2(null)
+    }
+  }, [selectedVehicle2, selectedCharacter2, statsMode, loadBasicStats, loadAdvancedStats])
 
   // Auto-run simulation when either combo selection changes (user requested)
   useEffect(() => {
@@ -342,6 +364,7 @@ function App() {
     ssmt1,
     ssmt2,
     statsMode,
+    runSimulation,
   ])
 
   // Keep UI checkbox state consistent with selection and simulation type.
@@ -376,9 +399,15 @@ function App() {
     selectedCharacter2,
     simulationType,
     differentialMode,
+    wheelie1,
+    wheelie2,
+    smt1,
+    smt2,
+    ssmt1,
+    ssmt2,
   ])
 
-  const getRadarData = () => {
+  const getRadarData = useCallback(() => {
   const labels = ['Speed', 'Mini Turbo', 'Weight', 'Handling', 'Offroad', 'Acceleration', 'Drift']
   const keys = ['speed', 'mini_turbo', 'weight', 'handling', 'offroad', 'acceleration', 'drift']
     const datasets = []
@@ -406,9 +435,9 @@ function App() {
       labels,
       datasets,
     }
-  }
+  }, [basicStats1, basicStats2, combo1BorderColor, combo2BorderColor])
 
-  const radarData = useMemo(() => getRadarData(), [basicStats1, basicStats2, theme])
+  const radarData = useMemo(() => getRadarData(), [getRadarData])
 
   const renderBasicStats = () => (
     <div className="basic-stats-layout">
