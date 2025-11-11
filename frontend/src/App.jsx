@@ -398,8 +398,8 @@ function App() {
   ])
 
   const getRadarData = () => {
-    const labels = ['Speed', 'Weight', 'Acceleration', 'Handling', 'Drift', 'Offroad', 'Mini Turbo']
-    const keys = ['speed', 'weight', 'acceleration', 'handling', 'drift', 'offroad', 'mini_turbo']
+  const labels = ['Speed', 'Mini Turbo', 'Weight', 'Handling', 'Offroad', 'Acceleration', 'Drift']
+  const keys = ['speed', 'mini_turbo', 'weight', 'handling', 'offroad', 'acceleration', 'drift']
     const datasets = []
     // Always include Combo 1 dataset
     const data1 = basicStats1 ? keys.map(key => basicStats1[key] || 0) : [0, 0, 0, 0, 0, 0, 0]
@@ -626,10 +626,8 @@ function App() {
 
     const coreItems = [
       { display: "Weight", key: "weight" },
-      { display: "Bump Deviation", key: "bump_deviation" },
       { display: "Speed", key: "speed" },
       { display: "Speed in Turn", key: "speed_in_turn" },
-      { display: "Tilt", key: "tilt" },
       { display: "Manual Handling", key: "manual_handling" },
       { display: "Auto Handling", key: "auto_handling" },
       { display: "Handling Reactivity", key: "handling_reactivity" },
@@ -658,6 +656,8 @@ function App() {
     const rotationItems = multiplierLabels.map((label, i) => ({ display: `Rotation - ${label}`, key: `rotation_multipliers_${i}` }));
 
     const miscItems = [
+      { display: "Bump Deviation", key: "bump_deviation" },
+      { display: "Tilt", key: "tilt" },
       { display: "Rotating Items Z Radius", key: "rotating_items_z_radius" },
       { display: "Rotating Items X Radius", key: "rotating_items_x_radius" },
       { display: "Rotating Items Y Distance", key: "rotating_items_y_distance" },
