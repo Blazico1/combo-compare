@@ -357,5 +357,3 @@ def set_names(units: list[StatsBase], is_driver: bool):
             unit.is_driver()
         else:
             unit.is_vehicle()
-
-# generate_data_points and calc_acceleration_distance were moved to logic/simulation.py

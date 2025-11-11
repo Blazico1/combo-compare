@@ -47,10 +47,8 @@ function MoonIcon({ className, style }) {
 }
 
 function App() {
-  // App render (debug logging removed)
   const [activeTab, setActiveTab] = useState('basic')
   const [statsMode, setStatsMode] = useState('vanilla')
-  const [activeMode, setActiveMode] = useState('compare')
   const [vehicles, setVehicles] = useState([])
   const [characters, setCharacters] = useState([])
   const [selectedVehicle1, setSelectedVehicle1] = useState('')
@@ -72,33 +70,18 @@ function App() {
   const [ssmt2, setSsmt2] = useState(false)
   const [simulationResult, setSimulationResult] = useState(null)
   const [loading, setLoading] = useState(false)
-  // Speed unit for TimePlot: 'km/h' or 'u/f' (units per frame). Default km/h
-  const [speedUnit, setSpeedUnit] = useState('km/h')
-  // Theme state for Light/Dark mode
+  const [speedUnit, setSpeedUnit] = useState('akm/h')
   const [theme, setTheme] = useState('dark')
 
   const toggleTheme = () => {
-    // Update the document attribute synchronously so CSS variables on :root
-    // are switched before the next render. This prevents a render-time race
-    // where getCssVar() reads the old variables while the component is
-    // rendering (which caused Chart.js to receive stale/incorrect colours).
     const newTheme = theme === 'dark' ? 'light' : 'dark'
     try {
       document.documentElement.setAttribute('data-theme', newTheme)
-    } catch (e) {
-      // ignore if not available
+    } catch (err) {
+      console.error('toggleTheme error', err)
     }
     setTheme(newTheme)
   }
-
-  // (We set the documentElement data-theme synchronously in toggleTheme to
-  // avoid timing races where render reads CSS variables before the attribute
-  // is updated.)
-
-  // NOTE: we intentionally don't write inline styles to `body` here.
-  // Theme is applied by toggling `document.documentElement.dataset.theme` above
-  // and by using CSS variables. The UI will animate if `body` has a
-  // `transition` defined for `background-color`/`color` in CSS (see `index.css`).
 
   // Read CSS variables (if available) so chart dataset colours follow the theme variables.
   const getCssVar = (name) => {
@@ -107,13 +90,12 @@ function App() {
       const el = document.documentElement
       const val = getComputedStyle(el).getPropertyValue(name)
       return val ? val.trim() : ''
-    } catch (e) {
+    } catch (err) {
+      console.error('getCssVar error for', name, err)
       return ''
     }
   }
 
-  // Chart colours are read directly from CSS theme variables. No fallbacks
-  // are used here — the theme variables are the single source of truth.
   const chartTextColor = getCssVar('--chart-text')
   const chartGridColor = getCssVar('--grid')
 
@@ -163,8 +145,8 @@ function App() {
       const response = await fetch(`/api/vehicles?mode=${statsMode}`)
       const data = await response.json()
       setVehicles(data.vehicles)
-    } catch (error) {
-      // error logging removed
+    } catch (err) {
+      console.error('loadVehicles failed', err)
     }
   }
 
@@ -173,8 +155,8 @@ function App() {
       const response = await fetch(`/api/characters?mode=${statsMode}`)
       const data = await response.json()
       setCharacters(data.characters)
-    } catch (error) {
-      // error logging removed
+    } catch (err) {
+      console.error('loadCharacters failed', err)
     }
   }
 
@@ -184,12 +166,10 @@ function App() {
     if (mode === statsMode) return
 
     setStatsMode(mode)
-    // Clear current stats when mode changes
     setBasicStats1(null)
     setBasicStats2(null)
     setAdvancedStats1(null)
     setAdvancedStats2(null)
-    // Reload vehicles and characters for new mode
     loadVehicles()
     loadCharacters()
   }
@@ -219,8 +199,8 @@ function App() {
       } else {
         setBasicStats2(statsObj)
       }
-    } catch (error) {
-      // error logging removed
+    } catch (err) {
+      console.error('loadBasicStats failed', err)
     }
   }
 
@@ -248,8 +228,8 @@ function App() {
       } else {
         setAdvancedStats2(statsObj)
       }
-    } catch (error) {
-      // error logging removed
+    } catch (err) {
+      console.error('loadAdvancedStats failed', err)
     }
   }
 
@@ -274,7 +254,7 @@ function App() {
         sim_type: simTypeMap[simulationType] || 'accel',
         differential: differentialMode,
         time: simulationTime,
-        mode: statsMode, // ensure backend looks up vehicles/characters in the correct stats mode
+        mode: statsMode,
       }
 
       if (combo1Ready) {
@@ -315,8 +295,6 @@ function App() {
         }
       }
 
-  // debug: simulate payload logged during development (disabled)
-
       const response = await fetch('/api/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -330,8 +308,9 @@ function App() {
 
       const data = await response.json()
       setSimulationResult(data)
-    } catch (error) {
-        alert('Simulation error: ' + (error.message || error))
+    } catch (err) {
+      console.error('runSimulation error', err)
+      alert('Simulation error: ' + (err.message || err))
     } finally {
       setLoading(false)
     }
@@ -411,7 +390,7 @@ function App() {
       backgroundColor: getCssVar('--combo1-bg'),
       borderColor: combo1BorderColor,
       borderWidth: 2,
-      pointRadius: 0, // No markers
+      pointRadius: 0,
     })
     // Always include Combo 2 dataset
     const data2 = basicStats2 ? keys.map(key => basicStats2[key] || 0) : [0, 0, 0, 0, 0, 0, 0]
@@ -421,7 +400,7 @@ function App() {
       backgroundColor: getCssVar('--combo2-bg'),
       borderColor: combo2BorderColor,
       borderWidth: 2,
-      pointRadius: 0, // No markers
+      pointRadius: 0,
     })
     return {
       labels,
@@ -446,7 +425,7 @@ function App() {
                     min: -0.1,
                     max: 1.1,
                     ticks: {
-                      display: false, // Hide numbers like original
+                      display: false,
                     },
                     grid: {
                       color: chartGridColor,
@@ -503,11 +482,8 @@ function App() {
     const formatNumber = (n) => {
       if (n === null || n === undefined) return '-'
       if (Number.isInteger(n)) return String(n)
-      // Use toPrecision to get up to 5 significant digits, then strip
-      // trailing zeros after the decimal point for a cleaner display.
       const p = Number(n).toPrecision(5)
       if (p.includes('e') || p.includes('E')) return p
-      // Remove trailing zeros but keep at least one digit after decimal when needed
       let s = p.replace(/(\.\d*?[1-9])0+$/, '$1')
       s = s.replace(/\.0+$/, '')
       return s
@@ -526,7 +502,6 @@ function App() {
   const getStatValue = (statsObj, key) => {
     if (!statsObj) return undefined
     if (!key) return undefined
-    // handle expanded multiplier keys
     const speedPrefix = 'speed_multipliers_'
     const rotPrefix = 'rotation_multipliers_'
     if (key.startsWith(speedPrefix) || key.startsWith(rotPrefix)) {
@@ -542,31 +517,22 @@ function App() {
     return statsObj[key]
   }
 
-  // Render simulation sidebar stats similar to the original PyQt UI.
-  // Optimized: accept a single `stats` object which may be from advanced OR basic
-  // (callers should pass `adv ?? basic`). This reduces branching and duplicates.
-  const renderSimSidebarStats = (stats) => {
-    if (!stats) return null
+  // Render simulation sidebar stats based on type
+  const renderSimSidebarStats = (adv) => {
+    if (!adv) return null
 
     if (simulationType === 'acceleration') {
-      const speedVal = stats?.speed
-      // advanced stats expose std_accel_a{0..3} while basic may expose As array
-      const As = typeof stats.std_accel_a0 !== 'undefined'
-        ? [stats.std_accel_a0, stats.std_accel_a1, stats.std_accel_a2, stats.std_accel_a3]
-        : (Array.isArray(stats.As) ? stats.As : [])
-      const Ts = typeof stats.std_accel_t1 !== 'undefined'
-        ? [stats.std_accel_t1, stats.std_accel_t2, stats.std_accel_t3]
-        : (Array.isArray(stats.Ts) ? stats.Ts : [])
+      const speedVal = adv.speed
+      const As = [adv.std_accel_a0, adv.std_accel_a1, adv.std_accel_a2, adv.std_accel_a3]
+      const Ts = [adv.std_accel_t1, adv.std_accel_t2, adv.std_accel_t3]
 
       return (
         <div>
           <div className="sim-stat-line">Speed: {formatValue(speedVal)}</div>
-          {/* Each A value on its own row to match PyQt layout */}
           <div className="sim-stat-line">A0: {formatValue(As[0])}</div>
           <div className="sim-stat-line">A1: {formatValue(As[1])}</div>
           <div className="sim-stat-line">A2: {formatValue(As[2])}</div>
           <div className="sim-stat-line">A3: {formatValue(As[3])}</div>
-          {/* Each T value on its own row */}
           <div className="sim-stat-line">T1: {formatValue(Ts[0])}</div>
           <div className="sim-stat-line">T2: {formatValue(Ts[1])}</div>
           <div className="sim-stat-line">T3: {formatValue(Ts[2])}</div>
@@ -574,9 +540,9 @@ function App() {
       )
     }
 
-    // Mini-turbo: show speed and mini-turbo duration as integer frames
-    const speedVal = stats?.speed
-    const mt = stats?.mini_turbo_duration ?? stats?.mini_turbo
+    // Mini-turbo: show speed and mini-turbo duration
+    const speedVal = adv.speed
+    const mt = adv.mini_turbo_duration
     return (
       <div>
         <div className="sim-stat-line">Speed: {formatValue(speedVal)}</div>
@@ -704,9 +670,6 @@ function App() {
               </tr>
             </thead>
             <tbody>
-              {/* Vehicle and Character header rows intentionally removed from advanced stats table
-                  — selections are already shown in the header controls. */}
-
               {sections.map(section => (
                 <Fragment key={section.id}>
                   <tr className="section-header" onClick={() => toggleSection(section.id)} style={{ cursor: 'pointer' }}>
@@ -780,14 +743,7 @@ function App() {
           })()}
         </div>
         <div className="sim-panel-stats">
-          {(() => {
-            // Prefer advanced stats for detailed fields (As/Ts/std accel and mini_turbo_duration)
-            const adv = advancedStats1
-            const basic = basicStats1
-            if (!adv && !basic) return null
-
-            return renderSimSidebarStats(adv ?? basic)
-          })()}
+          {renderSimSidebarStats(advancedStats1 ?? basicStats1)}
         </div>
       </div>
 
@@ -803,10 +759,11 @@ function App() {
               <input type="checkbox" disabled={!(selectedVehicle1 && selectedCharacter1 && selectedVehicle2 && selectedCharacter2)} checked={differentialMode} onChange={(e) => setDifferentialMode(e.target.checked)} /> Differential Mode
             </label>
           </div>
+          {loading && <div style={{ marginLeft: 12, fontSize: 12, color: 'var(--accent-2)' }}>Running...</div>}
         </div>
 
         <div className="simulation-plot">
-          <TimePlot simulationResult={simulationResult} differential={differentialMode} unit={speedUnit} />
+          <TimePlot simulationResult={simulationResult} differential={differentialMode} unit={speedUnit} simulationTime={simulationTime} />
         </div>
 
         <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -818,13 +775,13 @@ function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <label style={{ marginRight: 6 }}>Units:</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 12 }}>km/h</span>
+              <span style={{ fontSize: 12 }}>akm/h</span>
               <label className="unit-toggle" aria-label="Toggle speed units">
                 <input
                   type="checkbox"
                   className="unit-toggle-checkbox"
                   checked={speedUnit === 'u/f'}
-                  onChange={(e) => setSpeedUnit(e.target.checked ? 'u/f' : 'km/h')}
+                  onChange={(e) => setSpeedUnit(e.target.checked ? 'u/f' : 'akm/h')}
                 />
                 <span className="unit-toggle-slider" aria-hidden="true" />
               </label>
@@ -877,13 +834,7 @@ function App() {
           })()}
         </div>
         <div className="sim-panel-stats">
-          {(() => {
-            const adv = advancedStats2
-            const basic = basicStats2
-            if (!adv && !basic) return null
-
-            return renderSimSidebarStats(adv ?? basic)
-          })()}
+          {renderSimSidebarStats(advancedStats2 ?? basicStats2)}
         </div>
       </div>
     </div>
@@ -985,7 +936,7 @@ function App() {
         <div className="footer-inner">
           <div className="footer-about">
             <div className="footer-title">About</div>
-            <div className="about-text">Combo Compare is a tool to compare Mario Kart Wii vehicle &amp; character combinations. It also provides simple simulations to compare combo effectiveness.</div>
+            <div className="about-text">Combo Compare is a tool to compare Mario Kart Wii vehicle &amp; character combinations with support for MKW: Limitless rebalanced stats. It also provides simple simulations to compare combo effectiveness.</div>
           </div>
           <div className="footer-links">
             <div className="footer-title">Links</div>
@@ -996,7 +947,7 @@ function App() {
           </div>
           <div className="footer-credits">
             <div className="footer-title">Credits</div>
-            <div>Thanks to <a className="credit-link" href="https://www.youtube.com/@campbellmop355" target="_blank" rel="noopener noreferrer">CampbellMop</a> for providing useful information on the workings of Mario Kart Wii.</div>
+            <div>Thanks to <a className="credit-link" href="https://www.youtube.com/@campbellmop355" target="_blank" rel="noopener noreferrer">CampbellMop</a> for providing useful information on the physics of Mario Kart Wii.</div>
             <div>Built by <a className="credit-link" href="https://github.com/Blazico1" target="_blank" rel="noopener noreferrer">Blazico</a>.</div>
           </div>
         </div>

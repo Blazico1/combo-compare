@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -17,7 +17,8 @@ const getCssVar = (name) => {
   try {
     const val = getComputedStyle(document.documentElement).getPropertyValue(name)
     return val ? val.trim() : ''
-  } catch (e) {
+  } catch (err) {
+    console.error('getCssVar error', name, err)
     return ''
   }
 }
@@ -49,7 +50,6 @@ function buildSegmentDatasets(times, values, posColor, negColor, solid = true) {
   }
 
   const datasets = []
-  const linestyle = solid ? '-' : '--'
   const linewidth = solid ? 2 : 1.5
 
   for (let si = 0; si < segments.length; si++) {
@@ -113,7 +113,7 @@ function buildSegmentDatasets(times, values, posColor, negColor, solid = true) {
   return datasets
 }
 
-export default function TimePlot({ simulationResult, differential, unit = 'km/h' }) {
+export default function TimePlot({ simulationResult, differential, unit = 'akm/h', simulationTime }) {
   // simulationResult expected shape: { combo1: { times, speeds, distances }, combo2: {...} }
   const chartGridColor = getCssVar('--grid') || '#444'
   const combo1Color = getCssVar('--accent-2') || '#2244FF'
@@ -130,10 +130,10 @@ export default function TimePlot({ simulationResult, differential, unit = 'km/h'
   const d2 = simulationResult.combo2?.distances || []
 
       // Backend now returns distances in internal units per frame (u/f).
-      // If the UI requests 'km/h' (the default), convert units to metres by
-      // dividing by 216 (1 m == 216 u). If the UI requests 'u/f', display
+      // If the UI requests 'akm/h' (the default), convert units to metres by
+      // dividing by 100 (1 m == 100 u). If the UI requests 'u/f', display
       // the raw units as-is.
-      const distFactor = unit === 'km/h' ? (1.0 / 216.0) : 1.0
+      const distFactor = unit === 'akm/h' ? (1.0 / 100.0) : 1.0
       const d1_display = Array.isArray(d1) ? d1.map(v => v * distFactor) : d1
       const d2_display = Array.isArray(d2) ? d2.map(v => v * distFactor) : d2
 
@@ -195,7 +195,7 @@ export default function TimePlot({ simulationResult, differential, unit = 'km/h'
   const d1 = simulationResult.combo1.distances || []
   const d2 = simulationResult.combo2?.distances || []
 
-      const distFactorDiff = unit === 'km/h' ? (1.0 / 216.0) : 1.0
+      const distFactorDiff = unit === 'akm/h' ? (1.0 / 100.0) : 1.0
 
     // make arrays same length
     const minLen = Math.min(t.length, s1.length, s2.length, d1.length, d2.length)
@@ -247,9 +247,7 @@ export default function TimePlot({ simulationResult, differential, unit = 'km/h'
   const formatTick = (raw) => {
     const v = Number(raw)
     if (Number.isNaN(v)) return ''
-    // Round to the nearest 0.5 to avoid tiny fp noise
     const twoTimes = Math.round(v * 2)
-    // If the value was close to a half-integer, show it.
     if (Math.abs(v * 2 - twoTimes) < 1e-6) {
       // If whole integer, show without decimal
       if (twoTimes % 2 === 0) return String(twoTimes / 2)
@@ -258,22 +256,17 @@ export default function TimePlot({ simulationResult, differential, unit = 'km/h'
     return ''
   }
 
-  // Choose labels depending on mode so we can compute x min/max for tick generation.
-  // Snap min/max to nearest 0.5 boundaries so ticks like 9.0/10.0 appear even if data ends
-  // at a fractional frame time (e.g., 9.9833).
   const labels = differential ? dataDiff?.labels : dataNormal?.labels
-  let xMin = labels && labels.length ? Number(labels[0]) : undefined
-  let xMax = labels && labels.length ? Number(labels[labels.length - 1]) : undefined
-  if (typeof xMin === 'number' && !Number.isNaN(xMin)) xMin = Math.floor(xMin * 2) / 2
-  if (typeof xMax === 'number' && !Number.isNaN(xMax)) xMax = Math.ceil(xMax * 2) / 2
+  let xMin = 0
+  let xMax = typeof simulationTime === 'number' ? Number(simulationTime) : (labels && labels.length ? Number(labels[labels.length - 1]) : undefined)
 
   if (!differential) {
     // Compute how many ticks we'd like at 0.5 spacing, cap to a reasonable number.
     const desiredTicks = (typeof xMin === 'number' && typeof xMax === 'number') ? Math.floor((xMax - xMin) / 0.5) + 1 : 12
     const maxTicks = Math.min(Math.max(desiredTicks, 6), 25)
 
-  const speedLabel = unit === 'km/h' ? 'Speed (km/h)' : 'Speed (u/f)'
-  const distLabel = unit === 'km/h' ? 'Distance (m)' : 'Distance (u)'
+  const speedLabel = unit === 'akm/h' ? 'Speed (akm/h)' : 'Speed (u/f)'
+  const distLabel = unit === 'akm/h' ? 'Distance (m)' : 'Distance (u)'
 
   const xScale = {
       ...commonOptions.scales.x,
@@ -284,11 +277,11 @@ export default function TimePlot({ simulationResult, differential, unit = 'km/h'
         stepSize: 0.5,
         maxTicksLimit: maxTicks,
         callback: function (value) {
-          // Use scale helper where available to get the real numeric label
           let raw = value
           try {
             if (this && typeof this.getLabelForValue === 'function') raw = this.getLabelForValue(value)
-          } catch (e) {
+          } catch (err) {
+            console.error('xScale tick callback error', err)
             raw = value
           }
           return formatTick(raw)
@@ -328,7 +321,8 @@ export default function TimePlot({ simulationResult, differential, unit = 'km/h'
         let raw = value
         try {
           if (this && typeof this.getLabelForValue === 'function') raw = this.getLabelForValue(value)
-        } catch (e) {
+        } catch (err) {
+          console.error('xScaleDiff tick callback error', err)
           raw = value
         }
         return formatTick(raw)
@@ -337,7 +331,7 @@ export default function TimePlot({ simulationResult, differential, unit = 'km/h'
   }
 
   // If differential data is not available (e.g., user deselected a combo),
-  // render a gentle placeholder instead of crashing when dataDiff is null.
+  // render a placeholder instead of crashing when dataDiff is null.
   if (!dataDiff) {
     const muted = getCssVar('--muted') || '#888'
     const height = 460
@@ -353,10 +347,10 @@ export default function TimePlot({ simulationResult, differential, unit = 'km/h'
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ height: 220 }}>
-        <Line data={{ labels: dataDiff.labels, datasets: dataDiff.speedDatasets }} options={{ ...commonOptions, scales: { x: xScaleDiff, y: { title: { display: true, text: unit === 'km/h' ? 'Speed Difference (km/h)' : 'Speed Difference (u/f)' }, grid: { color: chartGridColor } } } }} />
+        <Line data={{ labels: dataDiff.labels, datasets: dataDiff.speedDatasets }} options={{ ...commonOptions, scales: { x: xScaleDiff, y: { title: { display: true, text: unit === 'akm/h' ? 'Speed Difference (akm/h)' : 'Speed Difference (u/f)' }, grid: { color: chartGridColor } } } }} />
       </div>
       <div style={{ height: 220 }}>
-        <Line data={{ labels: dataDiff.labels, datasets: dataDiff.distDatasets }} options={{ ...commonOptions, scales: { x: xScaleDiff, y: { title: { display: true, text: unit === 'km/h' ? 'Distance Difference (m)' : 'Distance Difference (u)' }, grid: { color: chartGridColor } } } }} />
+        <Line data={{ labels: dataDiff.labels, datasets: dataDiff.distDatasets }} options={{ ...commonOptions, scales: { x: xScaleDiff, y: { title: { display: true, text: unit === 'akm/h' ? 'Distance Difference (m)' : 'Distance Difference (u)' }, grid: { color: chartGridColor } } } }} />
       </div>
     </div>
   )

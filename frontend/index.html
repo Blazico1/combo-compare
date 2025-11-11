@@ -8,10 +8,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- Ensure React Refresh preamble hooks exist to avoid runtime errors
-         when the dev plugin injects HMR code but the preamble isn't present
-         (this can happen in some dev environments). These no-op stubs are
-         harmless in production and allow the app to load. -->
     <script>
       if (!window.$RefreshReg$) window.$RefreshReg$ = function() {};
       if (!window.$RefreshSig$) window.$RefreshSig$ = function() { return function() {}; };

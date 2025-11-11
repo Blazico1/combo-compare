@@ -15,7 +15,7 @@ app = FastAPI(title="Combo Compare API", version="1.0.0")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s: %(message)s')
 logger = logging.getLogger(__name__)
 
-# Configure CORS origins from environment (comma-separated) with sensible defaults for local dev
+# Configure CORS origins from environment
 allowed = os.environ.get('ALLOWED_ORIGINS')
 if allowed:
     allow_list = [o.strip() for o in allowed.split(',') if o.strip()]
@@ -273,14 +273,12 @@ def api_simulate(data: Dict[str, Any]):
             if vehicle2 is not None:
                 result2 = simulation.simulate_accel(vehicle2.get_basic_stats(), character2.get_basic_stats(), wheelie=wheelie2, ssmt=ssmt2, time=time)
         else:
-            # For mini-turbo simulation the SMT flag (short mini-turbo) comes from the 'smt' payload
+            # For mini-turbo simulation the SMT flag comes from the 'smt' payload
             result1 = simulation.simulate_mini_turbo(vehicle1.get_basic_stats(), character1.get_basic_stats(), wheelie=wheelie1, SMT=smt1, time=time)
             if vehicle2 is not None:
                 result2 = simulation.simulate_mini_turbo(vehicle2.get_basic_stats(), character2.get_basic_stats(), wheelie=wheelie2, SMT=smt2, time=time)
 
         # Distances returned by the simulation are in internal units per frame (u/f).
-        # We return distances in units here and let the frontend convert to metres
-        # when it needs to (1 m == 216 u).
         d1_u = result1[2]
         out = {
             'combo1': {

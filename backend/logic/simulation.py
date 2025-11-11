@@ -6,8 +6,6 @@ def simulate_accel(vstats, cstats, wheelie=False, ssmt=False, time=10.0):
 
     vstats and cstats are expected to be the dicts returned by
     StatsBase.get_basic_stats() (keys: 'speed', 'As', 'Ts', ...).
-    This function no longer parses files; the caller should provide the
-    already-parsed stats (keeps simulation pure and testable).
     Returns (speeds, distances) in units per frame (u/f).
     """
     if vstats is None and cstats is None:
@@ -128,7 +126,7 @@ def simulate_mini_turbo(vstats, cstats, wheelie=False, SMT=False, time=10.0):
 
 
 def calc_acceleration(speed, top_speed, acceleration_values, t_values):
-    """Port of calc_acceleration from stats: compute instantaneous accel given speed fraction.
+    """Compute instantaneous accel given speed fraction.
 
     Returns acceleration in units per frame (u/f).
     """

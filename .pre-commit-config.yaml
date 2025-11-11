@@ -11,10 +11,6 @@ repos:
       - id: ruff
         args: ["--select", "ALL"]
 
-  # Local hook to run frontend ESLint. This expects Node deps to be installed
-  # in `frontend/node_modules`. It will attempt to use npx if eslint isn't
-  # available on PATH. Keep this local to avoid forcing npm installs on every
-  # commit in environments where Node isn't present.
   - repo: local
     hooks:
       - id: eslint-frontend
