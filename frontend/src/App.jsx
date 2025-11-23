@@ -441,7 +441,49 @@ function App() {
 
   const renderBasicStats = () => (
     <div className="basic-stats-layout">
-      <div className="chart-column" style={{ width: '100%', padding: 0 }}>
+      <div className="chart-column" style={{ width: '100%', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.75rem',
+          marginBottom: '1.5rem',
+          padding: '1rem',
+          width: '100%',
+          fontWeight: 'bold',
+          color: 'var(--text)',
+          fontSize: '1.1rem'
+        }}>
+          {/* Combo 1 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'center' }}>
+            <div style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--combo1-bg)',
+              border: '2px solid var(--accent-2)'
+            }} />
+            <span>
+              {vehicles.find(v => String(v.id) === selectedVehicle1)?.name || '-'} +{' '}
+              {characters.find(c => String(c.id) === selectedCharacter1)?.name || '-'}
+            </span>
+          </div>
+          {/* Combo 2 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'center' }}>
+            <div style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--combo2-bg)',
+              border: '2px solid var(--accent-3)'
+            }} />
+            <span>
+              {vehicles.find(v => String(v.id) === selectedVehicle2)?.name || '-'} +{' '}
+              {characters.find(c => String(c.id) === selectedCharacter2)?.name || '-'}
+            </span>
+          </div>
+        </div>
         <div className="radar-container">
           <div className="radar-chart">
             <Radar key={theme} data={radarData} options={{
@@ -450,36 +492,19 @@ function App() {
               layout: { padding: { left: 40, right: 40, top: 20, bottom: 20 } },
                 scales: {
                   r: {
-                    // Use a slightly expanded range so the chart doesn't start at the exact 0 line
                     min: -0.1,
                     max: 1.1,
-                    ticks: {
-                      display: false,
-                    },
-                    grid: {
-                      color: chartGridColor,
-                    },
-                    angleLines: {
-                      color: chartGridColor,
-                    },
+                    ticks: { display: false },
+                    grid: { color: chartGridColor },
+                    angleLines: { color: chartGridColor },
                     pointLabels: {
                       color: chartTextColor,
-                      font: {
-                        size: 12,
-                      },
+                      font: { size: 12 },
                     },
                   },
                 },
-              plugins: {
-                legend: {
-                  display: false, // Remove legend
-                },
-              },
-              elements: {
-                point: {
-                  radius: 0, // Ensure no markers
-                },
-              },
+              plugins: { legend: { display: false } },
+              elements: { point: { radius: 0 } },
             }} />
           </div>
         </div>
@@ -971,7 +996,7 @@ function App() {
             <div className="footer-title">Links</div>
             <a href="https://wiki.tockdom.com/wiki/KartParam.bin" target="_blank" rel="noopener noreferrer">Vanilla Stats</a>
             <a href="https://wiki.tockdom.com/wiki/Mario_Kart_Wii:_Limitless" target="_blank" rel="noopener noreferrer">Limitless Wiki</a>
-            <a href="https://discord.com/invite/syF6AsTZTn" target="_blank" rel="noopener noreferrer">Limitless Discord</a>
+            <a href="https://discord.com/invite/98cfKG5mz4" target="_blank" rel="noopener noreferrer">Limitless Discord</a>
             <a href="https://github.com/Blazico1/combo-compare" target="_blank" rel="noopener noreferrer">GitHub</a>
           </div>
           <div className="footer-credits">
@@ -986,3 +1011,5 @@ function App() {
 }
 
 export default App
+
+
