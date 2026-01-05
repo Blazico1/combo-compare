@@ -693,7 +693,7 @@ function App() {
       { display: "Rotating Items Z Distance", key: "rotating_items_z_distance" },
       { display: "Max Normal Accel", key: "max_normal_accel" },
       { display: "Mega Mushroom Scale", key: "mega_mushroom_scale" },
-      { display: "Tire Distance", key: "tire_distance" },
+      { display: "Shock Scale", key: "shock_scale" },
     ];
 
     // Order: core first (open by default), then acceleration, speed, rotation,

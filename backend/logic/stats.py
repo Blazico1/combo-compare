@@ -74,7 +74,7 @@ class StatsBase:
         rotating_items_z_distance,
         max_normal_accel,
         mega_mushroom_scale,
-        tire_distance,
+        shock_scale,
     ):
         self.name = None
         self.id = id
@@ -114,7 +114,7 @@ class StatsBase:
         self.rotating_items_z_distance = rotating_items_z_distance
         self.max_normal_accel = max_normal_accel
         self.mega_mushroom_scale = mega_mushroom_scale
-        self.tire_distance = tire_distance
+        self.shock_scale = shock_scale
         self.vehicle_flag = False
 
     def __repr__(self):
@@ -238,7 +238,7 @@ class StatsBase:
             "rotating_items_z_distance": self.rotating_items_z_distance,
             "max_normal_accel": self.max_normal_accel,
             "mega_mushroom_scale": self.mega_mushroom_scale,
-            "tire_distance": self.tire_distance,
+            "shock_scale": self.shock_scale,
         }
         return stats
 
@@ -429,7 +429,7 @@ def parse_stats(file_path: str) -> list[StatsBase]:
             rotating_items_z_distance=section_data[95],
             max_normal_accel=section_data[96],
             mega_mushroom_scale=section_data[97],
-            tire_distance=section_data[98],
+            shock_scale=section_data[98],
         )
         units.append(unit)
         offset += 99 * 4  # Each section is 99 32-bit values
