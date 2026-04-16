@@ -119,7 +119,7 @@ function App() {
 
   const loadVehicles = useCallback(async () => {
     try {
-      const response = await fetch(`/api/vehicles?mode=${statsMode}`)
+      const response = await fetch(`api/vehicles?mode=${statsMode}`)
       const data = await response.json()
       setVehicles(data.vehicles)
     } catch (err) {
@@ -129,7 +129,7 @@ function App() {
 
   const loadCharacters = useCallback(async () => {
     try {
-      const response = await fetch(`/api/characters?mode=${statsMode}`)
+      const response = await fetch(`api/characters?mode=${statsMode}`)
       const data = await response.json()
       setCharacters(data.characters)
     } catch (err) {
@@ -160,11 +160,11 @@ function App() {
     try {
       let url = ''
       if (vehicle && character) {
-        url = `/api/basic-stats/${vehicle}/${character}?mode=${statsMode}`
+        url = `api/basic-stats/${vehicle}/${character}?mode=${statsMode}`
       } else if (vehicle) {
-        url = `/api/basic-stats/vehicle/${vehicle}?mode=${statsMode}`
+        url = `api/basic-stats/vehicle/${vehicle}?mode=${statsMode}`
       } else {
-        url = `/api/basic-stats/character/${character}?mode=${statsMode}`
+        url = `api/basic-stats/character/${character}?mode=${statsMode}`
       }
 
       const response = await fetch(url)
@@ -190,11 +190,11 @@ function App() {
     try {
       let url = ''
       if (vehicle && character) {
-        url = `/api/advanced-stats/${vehicle}/${character}?mode=${statsMode}`
+        url = `api/advanced-stats/${vehicle}/${character}?mode=${statsMode}`
       } else if (vehicle) {
-        url = `/api/advanced-stats/vehicle/${vehicle}?mode=${statsMode}`
+        url = `api/advanced-stats/vehicle/${vehicle}?mode=${statsMode}`
       } else {
-        url = `/api/advanced-stats/character/${character}?mode=${statsMode}`
+        url = `api/advanced-stats/character/${character}?mode=${statsMode}`
       }
 
       const response = await fetch(url)
@@ -272,7 +272,7 @@ function App() {
         }
       }
 
-      const response = await fetch('/api/simulate', {
+      const response = await fetch('api/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
