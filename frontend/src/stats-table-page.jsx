@@ -143,7 +143,7 @@ function StatsTablePage({ title, endpoint, columns, currentTable }) {
           </button>
         </div>
         <div className="stats-browser-links">
-          <a href="/combo-compare/">To Combo-Compare</a>
+          <a href="/combo-compare">To Combo-Compare</a>
           {currentTable === 'vehicles' ? (
             <a href="/combo-compare/characters">To Characters</a>
           ) : (
