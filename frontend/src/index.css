@@ -1,0 +1,15 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-dark);
+  color: var(--text);
+  transition: background-color var(--transition) ease, color var(--transition) ease;
+}
+
+#root {
+  min-height: 100vh;
+}

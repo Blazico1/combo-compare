@@ -1,0 +1,49 @@
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+// Workaround plugin: rewrite '/' to '/index.html' so browsers get the
+// application page instead of a 404 in some dev environments.
+function ensureRootIndexPlugin() {
+  return {
+    name: 'ensure-root-index',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url === '/' || req.url === '') {
+          req.url = '/index.html'
+        }
+        next()
+      })
+    }
+  }
+}
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  // When deploying under a path like example.com/combo-compare, set base so
+  // built asset links include the path prefix.
+  base: '/combo-compare/',
+  // Disable fast refresh to avoid runtime preamble detection issues seen in
+  // some dev environments (the UI will still hot-reload on full reloads).
+  plugins: [react({ fastRefresh: false }), ensureRootIndexPlugin()],
+  // Ensure Rollup uses the HTML entry from `public/index.html` so builds work
+  // without copying files in Docker. This makes the build deterministic and
+  // works both locally and inside containers.
+  // build: {
+  //   rollupOptions: {
+  //     input: path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'public/index.html')
+  //   }
+  // },
+  server: {
+    port: 3000,
+    proxy: {
+      // Proxy API calls to the backend FastAPI server
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false
+      }
+    }
+  }
+})

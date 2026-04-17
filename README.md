@@ -1,2 +1,2 @@
 # combo-compare
-A program for comparing combo stats for any MKWii stat mod.
+A web-app for comparing Mario Kart Wii or MKW: Limitless vehicle and character stats.
