@@ -119,7 +119,7 @@ function App() {
 
   const loadVehicles = useCallback(async () => {
     try {
-      const response = await fetch(`api/vehicles?mode=${statsMode}`)
+      const response = await fetch(`/api/vehicles?mode=${statsMode}`)
       const data = await response.json()
       setVehicles(data.vehicles)
     } catch (err) {
@@ -129,7 +129,7 @@ function App() {
 
   const loadCharacters = useCallback(async () => {
     try {
-      const response = await fetch(`api/characters?mode=${statsMode}`)
+      const response = await fetch(`/api/characters?mode=${statsMode}`)
       const data = await response.json()
       setCharacters(data.characters)
     } catch (err) {
@@ -160,11 +160,11 @@ function App() {
     try {
       let url = ''
       if (vehicle && character) {
-        url = `api/basic-stats/${vehicle}/${character}?mode=${statsMode}`
+        url = `/api/basic-stats/${vehicle}/${character}?mode=${statsMode}`
       } else if (vehicle) {
-        url = `api/basic-stats/vehicle/${vehicle}?mode=${statsMode}`
+        url = `/api/basic-stats/vehicle/${vehicle}?mode=${statsMode}`
       } else {
-        url = `api/basic-stats/character/${character}?mode=${statsMode}`
+        url = `/api/basic-stats/character/${character}?mode=${statsMode}`
       }
 
       const response = await fetch(url)
@@ -190,11 +190,11 @@ function App() {
     try {
       let url = ''
       if (vehicle && character) {
-        url = `api/advanced-stats/${vehicle}/${character}?mode=${statsMode}`
+        url = `/api/advanced-stats/${vehicle}/${character}?mode=${statsMode}`
       } else if (vehicle) {
-        url = `api/advanced-stats/vehicle/${vehicle}?mode=${statsMode}`
+        url = `/api/advanced-stats/vehicle/${vehicle}?mode=${statsMode}`
       } else {
-        url = `api/advanced-stats/character/${character}?mode=${statsMode}`
+        url = `/api/advanced-stats/character/${character}?mode=${statsMode}`
       }
 
       const response = await fetch(url)
@@ -272,7 +272,7 @@ function App() {
         }
       }
 
-      const response = await fetch('api/simulate', {
+      const response = await fetch('/api/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -666,6 +666,10 @@ function App() {
       { display: "Outside Drift Angle", key: "outside_drift_angle" },
       { display: "Outside Drift Decrement", key: "outside_drift_decrement" },
       { display: "Mini Turbo Duration", key: "mini_turbo_duration" },
+      ...(statsMode === 'limitless' ? [
+        { display: "MT Charge Time", key: "speed_multipliers_12" },
+        { display: "SMT Charge Time", key: "speed_multipliers_13" },
+      ] : []),
     ];
 
     const accelItems = [
@@ -997,7 +1001,9 @@ function App() {
             <a href="https://wiki.tockdom.com/wiki/KartParam.bin" target="_blank" rel="noopener noreferrer">Vanilla Stats</a>
             <a href="https://wiki.tockdom.com/wiki/Mario_Kart_Wii:_Limitless" target="_blank" rel="noopener noreferrer">Limitless Wiki</a>
             <a href="https://discord.com/invite/98cfKG5mz4" target="_blank" rel="noopener noreferrer">Limitless Discord</a>
-            <a href="https://github.com/Blazico1/combo-compare" target="_blank" rel="noopener noreferrer">GitHub</a>
+             <a href="https://github.com/Blazico1/combo-compare" target="_blank" rel="noopener noreferrer">GitHub</a>
+             <a href="/combo-compare/vehicles" target="_self">Vehicle Stats</a>
+             <a href="/combo-compare/characters" target="_self">Character Stats</a>
           </div>
           <div className="footer-credits">
             <div className="footer-title">Credits</div>
@@ -1011,5 +1017,6 @@ function App() {
 }
 
 export default App
+
 
 

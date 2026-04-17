@@ -100,12 +100,161 @@ class StatsManager:
 
 _stats_manager: Optional[StatsManager] = None
 
+VEHICLE_DISPLAY_ORDER = [
+    "Standard Kart S",
+    "Booster Seat",
+    "Mini Beast",
+    "Cheep Charger",
+    "Tiny Titan",
+    "Blue Falcon",
+    "Standard Bike S",
+    "Bullet Bike",
+    "Bit Bike",
+    "Quacker",
+    "Magikruiser",
+    "Jet Bubble",
+    "Standard Kart M",
+    "Classic Dragster",
+    "Wild Wing",
+    "Super Blooper",
+    "Daytripper",
+    "Sprinter",
+    "Standard Bike M",
+    "Mach Bike",
+    "Sugarscoot",
+    "Zip Zip",
+    "Sneakster",
+    "Dolphin Dasher",
+    "Standard Kart L",
+    "Offroader",
+    "Flame Flyer",
+    "Piranha Prowler",
+    "Jetsetter",
+    "Honeycoupe",
+    "Standard Bike L",
+    "Flame Runner",
+    "Wario Bike",
+    "Shooting Star",
+    "Spear",
+    "Phantom",
+]
+
+CHARACTER_DISPLAY_ORDER = [
+    "Baby Mario",
+    "Baby Luigi",
+    "Baby Peach",
+    "Baby Daisy",
+    "Toad",
+    "Toadette",
+    "Koopa",
+    "Dry Bones",
+    "Mii S",
+    "Mario",
+    "Luigi",
+    "Peach",
+    "Daisy",
+    "Yoshi",
+    "Birdo",
+    "Diddy Kong",
+    "Bowser jr",
+    "Mii M",
+    "Wario",
+    "Waluigi",
+    "DK",
+    "Bowser",
+    "King Boo",
+    "Rosalina",
+    "Funky Kong",
+    "Dry Bowser",
+    "Mii L",
+]
+
 
 def get_stats_manager() -> StatsManager:
     global _stats_manager
     if _stats_manager is None:
         _stats_manager = StatsManager()
     return _stats_manager
+
+
+def weight_class_label(value: int) -> str:
+    return {0: "Light", 1: "Medium", 2: "Heavy"}.get(value, str(value))
+
+
+def sort_rows_by_name(rows, ordered_names):
+    name_to_index = {name: index for index, name in enumerate(ordered_names)}
+    fallback_start = len(ordered_names)
+    return sorted(
+        rows,
+        key=lambda row: (name_to_index.get(row["name"], fallback_start), row["name"]),
+    )
+
+
+def serialize_vehicle_row(unit):
+    advanced = unit.get_advanced_stats()
+    return {
+        "id": unit.id,
+        "name": unit.name,
+        "num_tires": advanced["num_tires"],
+        "drift_type": advanced["drift_type"],
+        "weight_class": weight_class_label(advanced["weight_class"]),
+        "unknown": advanced["unknown"],
+        "weight": advanced["weight"],
+        "bump_deviation": advanced["bump_deviation"],
+        "speed": advanced["speed"],
+        "turn_speed": advanced["speed_in_turn"],
+        "tilt": advanced["tilt"],
+        "a0_accel": advanced["std_accel_a0"],
+        "a1_accel": advanced["std_accel_a1"],
+        "a2_accel": advanced["std_accel_a2"],
+        "a3_accel": advanced["std_accel_a3"],
+        "t1_accel": advanced["std_accel_t1"],
+        "t2_accel": advanced["std_accel_t2"],
+        "t3_accel": advanced["std_accel_t3"],
+        "a0_drift_accel": advanced["drift_accel_a0"],
+        "a1_drift_accel": advanced["drift_accel_a1"],
+        "t1_drift_accel": advanced["drift_accel_t1"],
+        "manual_handling": advanced["manual_handling"],
+        "auto_handling": advanced["auto_handling"],
+        "handling_reactivity": advanced["handling_reactivity"],
+        "drift": "Inside" if advanced["outside_drift_angle"] == 0 else "Outside",
+        "manual_drift": advanced["manual_drift"],
+        "auto_drift": advanced["auto_drift"],
+        "drift_reactivity": advanced["drift_reactivity"],
+        "drift_angle": advanced["outside_drift_angle"],
+        "drift_end_correction": advanced["outside_drift_decrement"],
+        "mini_turbo": advanced["mini_turbo_duration"],
+        "wall_kcl_speed": advanced["speed_multipliers"][12],
+        "invisible_wall_kcl_speed": advanced["speed_multipliers"][13],
+        "slippy_road": advanced["speed_multipliers"][1],
+        "light_off_road": advanced["speed_multipliers"][2],
+        "medium_off_road": advanced["speed_multipliers"][3],
+        "heavy_off_road": advanced["speed_multipliers"][4],
+        "slippy_off_road": advanced["speed_multipliers"][5],
+    }
+
+
+def serialize_character_row(unit):
+    advanced = unit.get_advanced_stats()
+    return {
+        "id": unit.id,
+        "name": unit.name,
+        "weight_class": weight_class_label(advanced["weight_class"]),
+        "weight": advanced["weight"],
+        "speed": advanced["speed"],
+        "turn_speed": advanced["speed_in_turn"],
+        "a0_accel": advanced["std_accel_a0"],
+        "a1_accel": advanced["std_accel_a1"],
+        "a2_accel": advanced["std_accel_a2"],
+        "a3_accel": advanced["std_accel_a3"],
+        "handling": advanced["manual_handling"],
+        "drift": advanced["manual_drift"],
+        "mini_turbo": advanced["mini_turbo_duration"],
+        "light_off_road": advanced["speed_multipliers"][2],
+        "medium_off_road": advanced["speed_multipliers"][3],
+        "heavy_off_road": advanced["speed_multipliers"][4],
+        "traction": advanced["rotation_multipliers"][1],
+    }
 
 
 @app.on_event("startup")
@@ -133,6 +282,24 @@ def api_characters(mode: str = "vanilla"):
     characters = [{"id": c.id, "name": c.name} for c in stats_data["characters"]]
     characters.sort(key=lambda x: x["name"].lower())
     return {"characters": characters}
+
+
+@app.get("/api/vehicle-table")
+def api_vehicle_table(mode: str = "vanilla"):
+    stats_data = get_stats_manager().get_by_mode(mode)
+    if not stats_data:
+        raise HTTPException(status_code=404, detail="Stats not loaded")
+    rows = [serialize_vehicle_row(vehicle) for vehicle in stats_data["vehicles"]]
+    return {"rows": sort_rows_by_name(rows, VEHICLE_DISPLAY_ORDER)}
+
+
+@app.get("/api/character-table")
+def api_character_table(mode: str = "vanilla"):
+    stats_data = get_stats_manager().get_by_mode(mode)
+    if not stats_data:
+        raise HTTPException(status_code=404, detail="Stats not loaded")
+    rows = [serialize_character_row(character) for character in stats_data["characters"]]
+    return {"rows": sort_rows_by_name(rows, CHARACTER_DISPLAY_ORDER)}
 
 
 # Vehicle-only / Character-only basic stats (must appear before pair route)
