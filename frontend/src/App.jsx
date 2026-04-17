@@ -998,7 +998,7 @@ function App() {
           </div>
           <div className="footer-links">
             <div className="footer-title">Links</div>
-            <a href="https://wiki.tockdom.com/wiki/KartParam.bin" target="_blank" rel="noopener noreferrer">Vanilla Stats</a>
+            <a href="https://wiki.tockdom.com/wiki/KartParam.bin" target="_blank" rel="noopener noreferrer">Stats on the Wiki</a>
             <a href="https://wiki.tockdom.com/wiki/Mario_Kart_Wii:_Limitless" target="_blank" rel="noopener noreferrer">Limitless Wiki</a>
             <a href="https://discord.com/invite/98cfKG5mz4" target="_blank" rel="noopener noreferrer">Limitless Discord</a>
              <a href="https://github.com/Blazico1/combo-compare" target="_blank" rel="noopener noreferrer">GitHub</a>
