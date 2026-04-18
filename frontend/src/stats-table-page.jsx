@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 function formatValue(value) {
   if (value === null || value === undefined) return '-'
   if (typeof value === 'number') {
-    return Number(value.toFixed(4)).toString()
+    return Number(value.toFixed(5)).toString()
   }
   return String(value)
 }
