@@ -49,6 +49,35 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  scrollbar-color: var(--border-weak) var(--bg);
+  scrollbar-width: thin;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: var(--border-weak);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
 }
 
 .app {
@@ -699,6 +728,26 @@ main {
 
 .stats-table-shell {
   overflow-x: auto;
+  scrollbar-color: var(--border-weak) var(--bg);
+  scrollbar-width: thin;
+}
+
+.stats-table-shell::-webkit-scrollbar {
+  height: 12px;
+}
+
+.stats-table-shell::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+.stats-table-shell::-webkit-scrollbar-thumb {
+  background: var(--border-weak);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+
+.stats-table-shell::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
 }
 
 .stats-data-table {
