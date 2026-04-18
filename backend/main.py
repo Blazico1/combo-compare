@@ -37,11 +37,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# If a built frontend exists under ../frontend/dist, serve it as static files
+# If a built frontend exists under ../frontend/dist, serve it as static files.
+# This mount must be registered after the API routes so `/api/...` is not
+# swallowed by the static-files handler.
 repo_root = os.path.dirname(os.path.dirname(__file__))
 frontend_dist = os.path.join(repo_root, "frontend", "dist")
-if os.path.isdir(frontend_dist):
-    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
 
 
 class StatsManager:
@@ -298,7 +298,9 @@ def api_character_table(mode: str = "vanilla"):
     stats_data = get_stats_manager().get_by_mode(mode)
     if not stats_data:
         raise HTTPException(status_code=404, detail="Stats not loaded")
-    rows = [serialize_character_row(character) for character in stats_data["characters"]]
+    rows = [
+        serialize_character_row(character) for character in stats_data["characters"]
+    ]
     return {"rows": sort_rows_by_name(rows, CHARACTER_DISPLAY_ORDER)}
 
 
@@ -543,6 +545,10 @@ def api_health():
         "vanilla_loaded": vanilla_loaded,
         "limitless_loaded": limitless_loaded,
     }
+
+
+if os.path.isdir(frontend_dist):
+    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
 
 
 if __name__ == "__main__":

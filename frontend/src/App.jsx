@@ -72,6 +72,24 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [speedUnit, setSpeedUnit] = useState('akm/h')
   const [theme, setTheme] = useState('dark')
+  const [isPortraitMobile, setIsPortraitMobile] = useState(false)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 768px) and (orientation: portrait)')
+    const updateIsPortraitMobile = (event) => {
+      setIsPortraitMobile(event.matches)
+    }
+
+    setIsPortraitMobile(mediaQuery.matches)
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', updateIsPortraitMobile)
+      return () => mediaQuery.removeEventListener('change', updateIsPortraitMobile)
+    }
+
+    mediaQuery.addListener(updateIsPortraitMobile)
+    return () => mediaQuery.removeListener(updateIsPortraitMobile)
+  }, [])
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark'
@@ -121,9 +139,15 @@ function App() {
     try {
       const response = await fetch(`/api/vehicles?mode=${statsMode}`)
       const data = await response.json()
-      setVehicles(data.vehicles)
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Failed to load vehicles')
+      }
+
+      setVehicles(Array.isArray(data.vehicles) ? data.vehicles : [])
     } catch (err) {
       console.error('loadVehicles failed', err)
+      setVehicles([])
     }
   }, [statsMode])
 
@@ -131,9 +155,15 @@ function App() {
     try {
       const response = await fetch(`/api/characters?mode=${statsMode}`)
       const data = await response.json()
-      setCharacters(data.characters)
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Failed to load characters')
+      }
+
+      setCharacters(Array.isArray(data.characters) ? data.characters : [])
     } catch (err) {
       console.error('loadCharacters failed', err)
+      setCharacters([])
     }
   }, [statsMode])
 
@@ -442,43 +472,19 @@ function App() {
   const renderBasicStats = () => (
     <div className="basic-stats-layout">
       <div className="chart-column" style={{ width: '100%', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.75rem',
-          marginBottom: '1.5rem',
-          padding: '1rem',
-          width: '100%',
-          fontWeight: 'bold',
-          color: 'var(--text)',
-          fontSize: '1.1rem'
-        }}>
+        <div className="basic-stats-legend">
           {/* Combo 1 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'center' }}>
-            <div style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--combo1-bg)',
-              border: '2px solid var(--accent-2)'
-            }} />
-            <span>
+          <div className="basic-stats-legend-row">
+            <div className="basic-stats-swatch combo1-swatch" />
+            <span className="basic-stats-legend-text">
               {vehicles.find(v => String(v.id) === selectedVehicle1)?.name || '-'} +{' '}
               {characters.find(c => String(c.id) === selectedCharacter1)?.name || '-'}
             </span>
           </div>
           {/* Combo 2 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'center' }}>
-            <div style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--combo2-bg)',
-              border: '2px solid var(--accent-3)'
-            }} />
-            <span>
+          <div className="basic-stats-legend-row">
+            <div className="basic-stats-swatch combo2-swatch" />
+            <span className="basic-stats-legend-text">
               {vehicles.find(v => String(v.id) === selectedVehicle2)?.name || '-'} +{' '}
               {characters.find(c => String(c.id) === selectedCharacter2)?.name || '-'}
             </span>
@@ -489,7 +495,11 @@ function App() {
             <Radar key={theme} data={radarData} options={{
               responsive: true,
               maintainAspectRatio: false,
-              layout: { padding: { left: 40, right: 40, top: 20, bottom: 20 } },
+              layout: {
+                padding: isPortraitMobile
+                  ? { left: 2, right: 2, top: 2, bottom: 2 }
+                  : { left: 40, right: 40, top: 20, bottom: 20 }
+              },
                 scales: {
                   r: {
                     min: -0.1,
@@ -499,7 +509,7 @@ function App() {
                     angleLines: { color: chartGridColor },
                     pointLabels: {
                       color: chartTextColor,
-                      font: { size: 12 },
+                      font: { size: isPortraitMobile ? 6 : 12 },
                     },
                   },
                 },
@@ -807,7 +817,7 @@ function App() {
 
       <div className="sim-middle">
         <div className="simulation-controls-row">
-          <div>
+          <div className="sim-controls-group">
             <label style={{ marginRight: 8 }}>Simulation Type:</label>
             <select className="sim-type-select" value={simulationType} onChange={(e) => setSimulationType(e.target.value)}>
               <option value="acceleration">Acceleration</option>
@@ -817,22 +827,22 @@ function App() {
               <input type="checkbox" disabled={!(selectedVehicle1 && selectedCharacter1 && selectedVehicle2 && selectedCharacter2)} checked={differentialMode} onChange={(e) => setDifferentialMode(e.target.checked)} /> Differential Mode
             </label>
           </div>
-          {loading && <div style={{ marginLeft: 12, fontSize: 12, color: 'var(--accent-2)' }}>Running...</div>}
+          {loading && <div className="sim-loading-indicator">Running...</div>}
         </div>
 
         <div className="simulation-plot">
           <TimePlot simulationResult={simulationResult} differential={differentialMode} unit={speedUnit} simulationTime={simulationTime} />
         </div>
 
-        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="simulation-footer">
+          <div className="simulation-time-group">
             <label style={{ marginRight: 8 }}>Simulation Time: {simulationTime}s</label>
-            <input type="range" min={3} max={20} value={simulationTime} onChange={(e) => setSimulationTime(parseInt(e.target.value, 10))} />
+            <input className="simulation-slider" type="range" min={3} max={20} value={simulationTime} onChange={(e) => setSimulationTime(parseInt(e.target.value, 10))} />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="simulation-units-group">
             <label style={{ marginRight: 6 }}>Units:</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="simulation-unit-toggle-row">
               <span style={{ fontSize: 12 }}>akm/h</span>
               <label className="unit-toggle" aria-label="Toggle speed units">
                 <input

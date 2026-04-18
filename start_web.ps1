@@ -106,7 +106,7 @@ Write-Host "Starting backend using venv Python: $backendPython"
 try {
     # Run uvicorn inside the backend venv via python -m uvicorn so the environment is used.
     # Use module `main:app` since the working directory is the backend folder.
-    $uvicornArgs = "-m uvicorn main:app --reload --port 8000"
+    $uvicornArgs = "-m uvicorn main:app --reload --host 0.0.0.0 --port 8000"
     $be = Start-Process -FilePath $backendPython -ArgumentList $uvicornArgs -WorkingDirectory (Join-Path $repo "backend") -RedirectStandardOutput $backendOut -RedirectStandardError $backendErr -WindowStyle Hidden -PassThru
     if ($be) {
         $be.Id | Out-File -FilePath $backendPidFile -Encoding ascii
@@ -142,7 +142,7 @@ if (-not (Test-Path (Join-Path $frontendDir "node_modules"))) {
 Write-Host "Starting frontend (npm run dev) in: $frontendDir"
 # Run npm through a new PowerShell process to avoid executing the npm.ps1 shim directly
 $pwshPath = (Get-Command powershell).Path
-$args = @('-NoProfile','-ExecutionPolicy','Bypass','-Command', "cd `"$frontendDir`"; npm run dev")
+$args = @('-NoProfile','-ExecutionPolicy','Bypass','-Command', "cd `"$frontendDir`"; npm run dev -- --host 0.0.0.0 --port 3000")
 try {
     $fe = Start-Process -FilePath $pwshPath -ArgumentList $args -WorkingDirectory $frontendDir -RedirectStandardOutput $frontendOut -RedirectStandardError $frontendErr -WindowStyle Hidden -PassThru
     if ($fe) {
